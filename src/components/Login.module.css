@@ -1,0 +1,223 @@
+.loginPageBackground *,
+.loginPageBackground *::before,
+.loginPageBackground *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.loginPageBackground {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 100vh;
+  padding: 24px;
+  box-sizing: border-box;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.mainBannerCard {
+  width: 100%;
+  max-width: 440px;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  position: relative;
+  
+  margin-top: 40px; 
+  padding: 40px 36px 36px;
+  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  overflow: visible; 
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 24px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.logo {
+  width: 100%;
+  max-width: 300px;
+  height: 65px;
+  background: #ffffff;
+  border-radius: 12px;
+  margin: -65px auto 16px auto; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  position: relative;
+  z-index: 2;
+}
+
+.sspcLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sspcLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;    
+}
+
+.sspcLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.title {
+  color: #ffffff;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  margin-top: 6px;
+  font-weight: 400;
+}
+
+.form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.label {
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-left: 2px;
+}
+
+.inputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputIcon {
+  position: absolute;
+  left: 14px;
+  color: #611232;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: #ffffff;
+  font-size: 0.95rem;
+  color: #222222;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.input::placeholder {
+  color: #888888;
+}
+
+.input:focus {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+.forgotPassword {
+  color: #ffffff;
+  font-size: 0.82rem;
+  text-decoration: none;
+  text-align: right;
+  margin-top: -4px;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.forgotPassword:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.submitButton {
+  width: 100%;
+  padding: 13px;
+  margin-top: 8px;
+  background-color: #ffffff;
+  color: #611232;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.submitButton:hover {
+  background-color: #f8f8f8;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.submitButton:active {
+  transform: translateY(0);
+}
+
+.footerText {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+  margin-top: 24px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.registerLink {
+  color: #ffffff;
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 5px;
+}
+
+.registerLink:hover {
+  opacity: 0.85;
+}

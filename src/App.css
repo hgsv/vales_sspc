@@ -182,3 +182,24 @@
     border-right-color: var(--border);
   }
 }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: #f0f0f0;
+}
+
+/* Anulamos la restricción de ancho que coloca Vite en el #root */
+#root {
+  max-width: 100% !important;
+  text-align: left !important;
+}
