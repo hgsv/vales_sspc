@@ -1,0 +1,302 @@
+.dashboardContainer {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f6f9;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    box-sizing: border-box;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+.sidebar {
+    width: 280px;
+    background-color: #691C32; 
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.sidebarHeader {
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    text-align: center;
+}
+
+.sidebarHeader h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+.systemName {
+    margin: 0.3rem 0 0 0;
+    font-size: 0.85rem;
+    color: #dfc19c; 
+}
+
+.userInfoCard {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.2rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    gap: 0.8rem;
+}
+
+.avatar {
+    font-size: 1.6rem;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    min-width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.userDetails {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.userName {
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.userRole {
+    font-size: 0.75rem;
+    color: #dfc19c;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+.navMenu {
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0;
+    flex-grow: 1;
+}
+
+.navItem {
+    background: none;
+    border: none;
+    color: #e0e0e0;
+    padding: 0.9rem 1.5rem;
+    text-align: left;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.navItem:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.navItem.active {
+    background-color: #80243B; /* Vino activo */
+    color: #ffffff;
+    font-weight: bold;
+    border-left: 4px solid #dfc19c;
+}
+
+.sidebarFooter {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.logoutButton {
+    width: 100%;
+    padding: 0.7rem;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-weight: 600;
+}
+
+.logoutButton:hover {
+    background-color: #8b1d1d;
+}
+
+.mainContent {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.topHeader {
+    background-color: #ffffff;
+    padding: 1.2rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.topHeader h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #333333;
+}
+
+.headerBadges {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.unitBadge, .levelBadge {
+    background-color: #e8ecef;
+    padding: 0.35rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.contentBody {
+    padding: 2rem;
+}
+
+.card {
+    background-color: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Zona de Arrastre y Carga (DropZone) */
+.dropZone {
+    border: 2px dashed #8b263e; /* Borde punteado en tono vino */
+    border-radius: 12px;
+    background-color: #fcf8f9;
+    padding: 35px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease-in-out;
+    margin: 20px 0;
+}
+
+.dropZone:hover, .dragOver {
+    background-color: #f4e8eb;
+    border-color: #611232;
+    transform: translateY(-2px);
+}
+
+.fileInputHidden {
+    display: none;
+}
+
+.dropZoneContent {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 12px;
+}
+
+.uploadIconContainer {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: #f0dbe0;
+    color: #611232;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.uploadTextGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.primaryText {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #2b2b2b;
+}
+
+.secondaryText {
+    font-size: 0.88rem;
+    color: #666666;
+}
+
+.browseLink {
+    color: #611232;
+    text-decoration: underline;
+}
+/* Encabezado con botón de reset */
+.cardHeaderFlex {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.resetButton {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    color: #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.resetButton:hover {
+    background-color: #e2e2e2;
+    border-color: #bbb;
+}
+
+/* Badges para la columna "Estatus" */
+.statusBadge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.statusBadge.entregado {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.statusBadge.asignado {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.statusBadge.pendiente {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.statusBadge.cancelado {
+    background-color: #f8d7da;
+    color: #721c24;
+}

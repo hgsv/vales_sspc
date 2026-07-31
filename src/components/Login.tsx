@@ -13,11 +13,50 @@ interface LoginProps {
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const [usuario, setUsuario] = useState('');
     const [contrasena, setContrasena] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (onLoginSuccess) {
-            onLoginSuccess();
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('http://localhost:9000/api/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    email: usuario,
+                    password: contrasena
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Credenciales incorrectas o error en el servidor');
+            }
+
+            if (data.access_token) {
+                localStorage.setItem('auth_token', data.access_token);
+            }
+
+            const userData = data.data?.user || data.user;
+            if (userData) {
+                localStorage.setItem('user_info', JSON.stringify(userData));
+            }
+
+            if (onLoginSuccess) {
+                onLoginSuccess();
+            }
+
+        } catch (err: any) {
+            setError(err.message || 'Error de conexión con el servidor.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -41,6 +80,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     <p className={styles.subtitle}>Sistema de Vales de Despensa</p>
                 </div>
 
+                {error && (
+                    <div className={styles.errorMessage} style={{ color: '#ffb3b3', textAlign: 'center', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                        ⚠️ {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit} className={styles.form}>
                     <div className={styles.inputGroup}>
                         <label className={styles.label} htmlFor="usuario">Usuario o correo</label>
@@ -48,12 +93,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             <span className={styles.inputIcon}>👤</span>
                             <input
                                 id="usuario"
-                                type="text"
+                                type="email"
                                 value={usuario}
                                 onChange={(e) => setUsuario(e.target.value)}
                                 placeholder="ejemplo@sspc.gob.mx"
                                 className={styles.input}
                                 required
+                                disabled={loading}
                             />
                         </div>
                     </div>
@@ -70,6 +116,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                 placeholder="••••••••"
                                 className={styles.input}
                                 required
+                                disabled={loading}
                             />
                         </div>
                     </div>
@@ -78,8 +125,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         ¿Olvidaste tu contraseña?
                     </a>
 
-                    <button type="submit" className={styles.submitButton}>
-                        Ingresar
+                    <button type="submit" className={styles.submitButton} disabled={loading}>
+                        {loading ? 'Ingresando...' : 'Ingresar'}
                     </button>
                 </form>
             </div>

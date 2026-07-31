@@ -6,28 +6,33 @@
   padding: 0;
 }
 
+/* Contenedor principal que abarca toda la pantalla */
 .loginPageBackground {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  width: 100vw;
   min-height: 100vh;
   padding: 24px;
   box-sizing: border-box;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
+/* Tarjeta del Login Responsiva */
 .mainBannerCard {
   width: 100%;
-  max-width: 440px;
+  max-width: 420px; /* Tamaño adecuado para desktop */
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   position: relative;
   
-  margin-top: 40px; 
-  padding: 40px 36px 36px;
+  margin-top: 30px; 
+  padding: 36px 28px 32px; /* Espaciado interno cómodo */
   
   display: flex;
   flex-direction: column;
@@ -47,9 +52,10 @@
   z-index: 1;
 }
 
+/* Contenedor del Logo con comportamiento responsivo */
 .logo {
-  width: 100%;
-  max-width: 300px;
+  width: 90%;
+  max-width: 280px;
   height: 65px;
   background: #ffffff;
   border-radius: 12px;
@@ -63,18 +69,7 @@
   z-index: 2;
 }
 
-.sspcLogo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.sspcLogo {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;    
-}
-
+/* Limpiamos declaraciones duplicadas de .sspcLogo */
 .sspcLogo {
   width: 100%;
   height: 100%;
@@ -83,7 +78,7 @@
 
 .title {
   color: #ffffff;
-  font-size: 1.75rem;
+  font-size: 1.65rem;
   font-weight: 700;
   margin: 0;
   letter-spacing: -0.02em;
@@ -92,7 +87,7 @@
 
 .subtitle {
   color: rgba(255, 255, 255, 0.9);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   margin-top: 6px;
   font-weight: 400;
 }
@@ -220,4 +215,25 @@
 
 .registerLink:hover {
   opacity: 0.85;
+}
+
+/* Media Query para Celulares / Pantallas pequeñas */
+@media (max-width: 480px) {
+  .loginPageBackground {
+    padding: 16px;
+  }
+
+  .mainBannerCard {
+    padding: 32px 20px 24px;
+    margin-top: 20px;
+  }
+
+  .logo {
+    height: 55px;
+    margin-top: -55px;
+  }
+
+  .title {
+    font-size: 1.4rem;
+  }
 }

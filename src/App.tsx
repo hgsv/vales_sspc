@@ -1,20 +1,26 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Login } from './components/Login';
-import Dashboard from './pages/Dashboard';
-import './App.css';
+import { Dashboard } from './components/Dashboard/Dashboard'; 
 
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+export const App: React.FC = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
-  return (
-    <main>
-      {isAuthenticated ? (
-        <Dashboard />
-      ) : (
-        <Login onLoginSuccess={() => setIsAuthenticated(true)} />
-      )}
-    </main>
-  );
-}
+    useEffect(() => {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+            setIsAuthenticated(true);
+        }
+    }, []);
+
+    return (
+        <div>
+            {isAuthenticated ? (
+                <Dashboard onLogout={() => setIsAuthenticated(false)} />
+            ) : (
+                <Login onLoginSuccess={() => setIsAuthenticated(true)} />
+            )}
+        </div>
+    );
+};
 
 export default App;
