@@ -6,7 +6,6 @@
   padding: 0;
 }
 
-/* Contenedor principal que abarca toda la pantalla */
 .loginPageBackground {
   display: flex;
   justify-content: center;
@@ -23,16 +22,15 @@
   left: 0;
 }
 
-/* Tarjeta del Login Responsiva */
 .mainBannerCard {
   width: 100%;
-  max-width: 420px; /* Tamaño adecuado para desktop */
+  max-width: 420px;
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   position: relative;
   
   margin-top: 30px; 
-  padding: 36px 28px 32px; /* Espaciado interno cómodo */
+  padding: 36px 28px 32px; 
   
   display: flex;
   flex-direction: column;
@@ -52,7 +50,6 @@
   z-index: 1;
 }
 
-/* Contenedor del Logo con comportamiento responsivo */
 .logo {
   width: 90%;
   max-width: 280px;
@@ -217,7 +214,6 @@
   opacity: 0.85;
 }
 
-/* Media Query para Celulares / Pantallas pequeñas */
 @media (max-width: 480px) {
   .loginPageBackground {
     padding: 16px;

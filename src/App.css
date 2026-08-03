@@ -198,7 +198,6 @@ html, body, #root {
   background-color: #f0f0f0;
 }
 
-/* Anulamos la restricción de ancho que coloca Vite en el #root */
 #root {
   max-width: 100% !important;
   text-align: left !important;

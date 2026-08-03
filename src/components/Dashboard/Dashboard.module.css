@@ -184,9 +184,8 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* Zona de Arrastre y Carga (DropZone) */
 .dropZone {
-    border: 2px dashed #8b263e; /* Borde punteado en tono vino */
+    border: 2px dashed #8b263e; 
     border-radius: 12px;
     background-color: #fcf8f9;
     padding: 35px 20px;
@@ -247,7 +246,6 @@
     color: #611232;
     text-decoration: underline;
 }
-/* Encabezado con botón de reset */
 .cardHeaderFlex {
     display: flex;
     justify-content: space-between;
@@ -271,7 +269,6 @@
     border-color: #bbb;
 }
 
-/* Badges para la columna "Estatus" */
 .statusBadge {
     display: inline-block;
     padding: 4px 10px;

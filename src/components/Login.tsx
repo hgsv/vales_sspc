@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import styles from './Login.module.css';
 
-// Rutas de imágenes
 import SSPCLogo from '../images/SSPC.png';
 import TexturaRoja from '../images/textura-roja.png';
 import TexturaClara from '../images/textura-roja2.png';

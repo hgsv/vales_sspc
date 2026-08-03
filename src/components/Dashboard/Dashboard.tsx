@@ -117,7 +117,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         }
     };
 
-    // Procesar archivo Excel (subida manual o drag and drop)
     const processExcelFile = (file: File) => {
         setFileName(file.name);
         const reader = new FileReader();
@@ -143,7 +142,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         reader.readAsBinaryString(file);
     };
 
-    // Restablecer datos de muestra
     const handleResetToMockData = () => {
         setExcelData(mockValesData);
         setColumns(Object.keys(mockValesData[0]));
@@ -160,7 +158,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
 
     return (
         <div className={styles.dashboardContainer}>
-            {/* Sidebar Lateral Color Vino */}
             <aside className={styles.sidebar}>
                 <div className={styles.sidebarHeader}>
                     <h2>Panel Administrador</h2>
@@ -225,7 +222,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                 </div>
             </aside>
 
-            {/* Contenido Principal */}
             <main className={styles.mainContent}>
                 <header className={styles.topHeader}>
                     <div>
