@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 .dashboardContainer {
     display: flex;
     min-height: 100vh;
@@ -5,7 +7,11 @@
     margin: 0;
     padding: 0;
     background-color: #f4f6f9;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-image: var(--bg-claro, none);
+    background-blend-mode: overlay; 
+    background-size: cover;
+    background-position: center;
+    font-family: 'Poppins', sans-serif; 
     box-sizing: border-box;
     position: absolute;
     top: 0;
@@ -13,9 +19,13 @@
     right: 0;
     bottom: 0;
 }
+
 .sidebar {
     width: 280px;
     background-color: #691C32; 
+    background-image: var(--bg-rojo, none);
+    background-size: cover;
+    background-position: center;
     color: #ffffff;
     display: flex;
     flex-direction: column;
@@ -46,7 +56,7 @@
     display: flex;
     align-items: center;
     padding: 1rem 1.2rem;
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: rgba(0, 0, 0, 0.25);
     gap: 0.8rem;
 }
 
@@ -110,7 +120,7 @@
 }
 
 .navItem.active {
-    background-color: #80243B; /* Vino activo */
+    background-color: #80243B;
     color: #ffffff;
     font-weight: bold;
     border-left: 4px solid #dfc19c;
@@ -145,7 +155,7 @@
 }
 
 .topHeader {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.9); /* Ligeramente translúcido para que luzca la textura */
     padding: 1.2rem 2rem;
     display: flex;
     justify-content: space-between;
@@ -178,7 +188,7 @@
 }
 
 .card {
-    background-color: #ffffff;
+    background-color: rgba(255, 255, 255, 0.95);
     padding: 1.5rem;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -187,7 +197,7 @@
 .dropZone {
     border: 2px dashed #8b263e; 
     border-radius: 12px;
-    background-color: #fcf8f9;
+    background-color: rgba(252, 248, 249, 0.8);
     padding: 35px 20px;
     text-align: center;
     cursor: pointer;
@@ -246,6 +256,7 @@
     color: #611232;
     text-decoration: underline;
 }
+
 .cardHeaderFlex {
     display: flex;
     justify-content: space-between;

@@ -4,29 +4,32 @@ import { Dashboard } from './components/Dashboard/Dashboard';
 
 export const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-    /*
-    useEffect(() => {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-            setIsAuthenticated(true);
-        }
-    }, []);/*/
-    const[token,setToken] = useState(()=>{ // Se agrego para poder tener acceso desde Mi portal RH
-            const urlParams = new URLSearchParams(window.location.search);
-            const tokenFromUrl = urlParams.get('token');
+
+    const [token, setToken] = useState(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
     
-            if (tokenFromUrl || localStorage.getItem('auth_token')){
+        if (tokenFromUrl || localStorage.getItem('auth_token')){
+            const activeToken = tokenFromUrl || localStorage.getItem('auth_token');
+            if (tokenFromUrl) {
                 localStorage.setItem('auth_token', tokenFromUrl);
-                window.history.replaceState({},document.title,window.location.pathname);
-                setIsAuthenticated(true);
-                return tokenFromUrl;
             }
-            return localStorage.getItem('auth_token');
-        });
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setIsAuthenticated(true);
+            return activeToken;
+        }
+        return localStorage.getItem('auth_token');
+    });
+
     return (
         <div>
             {isAuthenticated ? (
-                <Dashboard onLogout={() => setIsAuthenticated(false)} />
+                <Dashboard onLogout={() => {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('usuario');
+                    setIsAuthenticated(false);
+                }} />
             ) : (
                 <Login onLoginSuccess={() => setIsAuthenticated(true)} />
             )}
