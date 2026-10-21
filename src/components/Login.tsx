@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styles from './Login.module.css';
+import { apiUrl } from '../config/api';
 
 import SSPCLogo from '../images/SSPC.png';
 import TexturaRoja from '../images/textura-roja.png';
@@ -21,7 +22,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setError(null);
 
         try {
-            const response = await fetch('http://localhost:9000/api/login', {
+            const response = await fetch(apiUrl('login'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

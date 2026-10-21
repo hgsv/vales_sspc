@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS, apiUrl } from '../../config/api';
 import "../gestor/GestorView.css";
 
 interface RegistroVale {
@@ -28,17 +28,21 @@ export function EstatusValesView() {
     setLoading(true);
     const token = localStorage.getItem('auth_token');
     try {
-      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/registrados?estatus=${filtroEstatus}`, {
+      const response = await fetch(`${apiUrl('gestor/vales/registrados')}?estatus=${encodeURIComponent(filtroEstatus)}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
         }
       });
       const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || `Error HTTP ${response.status} al consultar los vales.`);
+      }
       const listaRegistros = data.data || data.registros || (Array.isArray(data) ? data : []);
       setRegistros(listaRegistros);
     } catch (error) {
       console.error('Error al obtener registros de vales:', error);
+      setRegistros([]);
     } finally {
       setLoading(false);
     }
@@ -62,7 +66,7 @@ export function EstatusValesView() {
 
       const data = await response.json();
       if (response.ok && data.status) {
-        setRegistros(prev => prev.map(reg => 
+        setRegistros(prev => prev.map(reg =>
           reg.idRegister === idRegister ? { ...reg, idStatus: nuevoEstatus } : reg
         ));
       } else {
@@ -121,7 +125,7 @@ export function EstatusValesView() {
       setLoading(false);
     }
   };
-  
+
 
   return (
     <div className="gestor-container">
@@ -132,13 +136,13 @@ export function EstatusValesView() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label 
-              htmlFor="upload-tarjetas-input" 
-              className="btn-primary" 
-              style={{ 
-                display: 'inline-flex', 
-                alignItems: 'center', 
-                gap: '8px', 
+            <label
+              htmlFor="upload-tarjetas-input"
+              className="btn-primary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
                 cursor: 'pointer',
                 backgroundColor: '#0284c7',
                 borderColor: '#0284c7',
@@ -147,19 +151,19 @@ export function EstatusValesView() {
             >
               📁 Seleccionar Archivo
             </label>
-            <input 
-              id="upload-tarjetas-input" 
-              type="file" 
-              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
-              style={{ display: 'none' }} 
+            <input
+              id="upload-tarjetas-input"
+              type="file"
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              style={{ display: 'none' }}
               onChange={handleFileChange}
             />
 
             {/* Botón para procesar las tarjetas después de cargarlas */}
             {selectedFile && (
-              <button 
-                type="button" 
-                onClick={handleEnviarArchivo} 
+              <button
+                type="button"
+                onClick={handleEnviarArchivo}
                 className="btn-primary"
                 style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
               >
@@ -179,8 +183,8 @@ export function EstatusValesView() {
       <div className="gestor-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <span className="gestor-section-title">Filtrar por Estatus:</span>
-          <select 
-            value={filtroEstatus} 
+          <select
+            value={filtroEstatus}
             onChange={(e) => setFiltroEstatus(e.target.value)}
             className="gestor-text-input"
             style={{ maxWidth: '250px', marginTop: '5px' }}
@@ -242,50 +246,50 @@ export function EstatusValesView() {
                         </span>
                       </td>
                       <td className="gestor-td-center" style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-<button 
-  type="button"
-  onClick={async () => {
-    // Validar que el ID exista antes de hacer el fetch
-    const idReg = reg.idRegister || (reg as any).idregister;
-    if (!idReg) {
-      alert('Error: El ID del registro no está definido.');
-      return;
-    }
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            // Validar que el ID exista antes de hacer el fetch
+                            const idReg = reg.idRegister || (reg as any).idregister;
+                            if (!idReg) {
+                              alert('Error: El ID del registro no está definido.');
+                              return;
+                            }
 
-    const token = localStorage.getItem('auth_token');
-    try {
-      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos/${idReg}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      } else {
-        const errData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-        console.error('Error del backend:', errData);
-        alert(`Error al generar PDF: ${errData.message || response.statusText}`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert('Error de conexión al descargar formatos.');
-    }
-  }}
-  style={{
-    padding: '5px 10px',
-    fontSize: '11px',
-    backgroundColor: '#0284c7',
-    color: '#fff',
-    border: '1px solid #0284c7',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  }}
->
-  📄 Descarga de formatos
-</button>
-                        <button 
+                            const token = localStorage.getItem('auth_token');
+                            try {
+                              const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos/${idReg}`, {
+                                headers: {
+                                  'Authorization': `Bearer ${token}`
+                                }
+                              });
+                              if (response.ok) {
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                window.open(url, '_blank');
+                              } else {
+                                const errData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+                                console.error('Error del backend:', errData);
+                                alert(`Error al generar PDF: ${errData.message || response.statusText}`);
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert('Error de conexión al descargar formatos.');
+                            }
+                          }}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '11px',
+                            backgroundColor: '#0284c7',
+                            color: '#fff',
+                            border: '1px solid #0284c7',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          📄 Descarga de formatos
+                        </button>
+                        <button
                           type="button"
                           onClick={() => handleCambiarEstatus(reg.idRegister, 1)}
                           style={{
@@ -300,7 +304,7 @@ export function EstatusValesView() {
                         >
                           Marcar Pendiente
                         </button>
-                        <button 
+                        <button
                           type="button"
                           onClick={() => handleCambiarEstatus(reg.idRegister, 2)}
                           style={{
