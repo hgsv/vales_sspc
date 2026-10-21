@@ -4,11 +4,16 @@ import "../gestor/GestorView.css";
 
 interface RegistroVale {
   idRegister: number | string;
-  numEmpleado: string;
-  nomEmpleado: string;
-  appEmpleado: string;
+  numEmpleado?: string;
+  numempleado?: string;
+  nomEmpleado?: string;
+  nomempleado?: string;
+  appEmpleado?: string;
+  appempleado?: string;
   rfc: string;
   curp: string;
+  cuentaInicial?: string;
+  cuentainicial?: string;
   idStatus: number;
 }
 
@@ -17,6 +22,7 @@ export function EstatusValesView() {
   const [loading, setLoading] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
   const [fileName, setFileName] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Estado para guardar el archivo temporalmente
 
   const fetchRegistros = async () => {
     setLoading(true);
@@ -29,9 +35,8 @@ export function EstatusValesView() {
         }
       });
       const data = await response.json();
-      if (data.status) {
-        setRegistros(data.data);
-      }
+      const listaRegistros = data.data || data.registros || (Array.isArray(data) ? data : []);
+      setRegistros(listaRegistros);
     } catch (error) {
       console.error('Error al obtener registros de vales:', error);
     } finally {
@@ -69,13 +74,54 @@ export function EstatusValesView() {
     }
   };
 
+  // Solo almacena el archivo seleccionado localmente
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setSelectedFile(file);
       setFileName(file.name);
-      console.log("Archivo de tarjetas seleccionado:", file.name);
     }
   };
+
+  // Función que se ejecuta al presionar el botón "Agregar tarjetas"
+  const handleEnviarArchivo = async () => {
+    if (!selectedFile) {
+      alert('Por favor selecciona un archivo primero.');
+      return;
+    }
+
+    const token = localStorage.getItem('auth_token');
+    const formData = new FormData();
+    formData.append('archivo', selectedFile);
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/cargar-tarjetas`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+      if (response.ok && data.status) {
+        alert(data.message || 'Tarjetas cargadas y asociadas correctamente.');
+        setSelectedFile(null);
+        setFileName('');
+        fetchRegistros(); // Recarga la tabla para reflejar las cuentas asignadas
+      } else {
+        alert(data.message || 'Error al procesar el archivo.');
+      }
+    } catch (error) {
+      console.error('Error al subir el archivo:', error);
+      alert('Error de conexión al subir el archivo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
 
   return (
     <div className="gestor-container">
@@ -84,31 +130,47 @@ export function EstatusValesView() {
           <h2 className="gestor-title">Control y Entrega de Vales de Despensa</h2>
           <p className="gestor-subtitle">Gestión de estatus (Pendiente / Entregada) para el personal registrado.</p>
         </div>
-        <div>
-          <label 
-            htmlFor="upload-tarjetas-input" 
-            className="btn-primary" 
-            style={{ 
-              display: 'inline-flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              cursor: 'pointer',
-              backgroundColor: '#0284c7',
-              borderColor: '#0284c7'
-            }}
-          >
-            📁 Cargar Tarjetas
-          </label>
-          <input 
-            id="upload-tarjetas-input" 
-            type="file" 
-            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
-            style={{ display: 'none' }} 
-            onChange={handleFileChange}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <label 
+              htmlFor="upload-tarjetas-input" 
+              className="btn-primary" 
+              style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                cursor: 'pointer',
+                backgroundColor: '#0284c7',
+                borderColor: '#0284c7',
+                margin: 0
+              }}
+            >
+              📁 Seleccionar Archivo
+            </label>
+            <input 
+              id="upload-tarjetas-input" 
+              type="file" 
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" 
+              style={{ display: 'none' }} 
+              onChange={handleFileChange}
+            />
+
+            {/* Botón para procesar las tarjetas después de cargarlas */}
+            {selectedFile && (
+              <button 
+                type="button" 
+                onClick={handleEnviarArchivo} 
+                className="btn-primary"
+                style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
+              >
+                ✅ Agregar tarjetas
+              </button>
+            )}
+          </div>
+
           {fileName && (
-            <span style={{ display: 'block', fontSize: '11px', color: '#64748b', marginTop: '4px', textAlign: 'right' }}>
-              {fileName}
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              Archivo seleccionado: <strong>{fileName}</strong>
             </span>
           )}
         </div>
@@ -145,6 +207,7 @@ export function EstatusValesView() {
                   <th>Nombre Completo</th>
                   <th>RFC</th>
                   <th>CURP</th>
+                  <th>Cuenta Asignada</th>
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
                   <th style={{ textAlign: 'center' }}>Acciones / Asignar Estatus</th>
                 </tr>
@@ -154,12 +217,18 @@ export function EstatusValesView() {
                   const rowClass = index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd';
                   const esEntregada = Number(reg.idStatus) === 2;
 
+                  const numEmp = reg.numEmpleado || reg.numempleado || '-';
+                  const nomEmp = reg.nomEmpleado || reg.nomempleado || '';
+                  const appEmp = reg.appEmpleado || reg.appempleado || '';
+                  const cuenta = reg.cuentaInicial || reg.cuentainicial || 'Sin asignación';
+
                   return (
-                    <tr key={reg.idRegister} className={rowClass}>
-                      <td className="gestor-td gestor-num-emp">{reg.numempleado}</td>
-                      <td className="gestor-td">{reg.nomempleado} {reg.appempleado}</td>
+                    <tr key={reg.idRegister || index} className={rowClass}>
+                      <td className="gestor-td gestor-num-emp">{numEmp}</td>
+                      <td className="gestor-td">{[nomEmp, appEmp].filter(Boolean).join(' ')}</td>
                       <td className="gestor-td gestor-mono">{reg.rfc}</td>
                       <td className="gestor-td gestor-mono">{reg.curp}</td>
+                      <td className="gestor-td gestor-mono">{cuenta}</td>
                       <td className="gestor-td-center">
                         <span style={{
                           padding: '4px 10px',
@@ -173,6 +242,49 @@ export function EstatusValesView() {
                         </span>
                       </td>
                       <td className="gestor-td-center" style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+<button 
+  type="button"
+  onClick={async () => {
+    // Validar que el ID exista antes de hacer el fetch
+    const idReg = reg.idRegister || (reg as any).idregister;
+    if (!idReg) {
+      alert('Error: El ID del registro no está definido.');
+      return;
+    }
+
+    const token = localStorage.getItem('auth_token');
+    try {
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos/${idReg}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else {
+        const errData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+        console.error('Error del backend:', errData);
+        alert(`Error al generar PDF: ${errData.message || response.statusText}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error de conexión al descargar formatos.');
+    }
+  }}
+  style={{
+    padding: '5px 10px',
+    fontSize: '11px',
+    backgroundColor: '#0284c7',
+    color: '#fff',
+    border: '1px solid #0284c7',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  }}
+>
+  📄 Descarga de formatos
+</button>
                         <button 
                           type="button"
                           onClick={() => handleCambiarEstatus(reg.idRegister, 1)}
@@ -209,7 +321,7 @@ export function EstatusValesView() {
                 })}
                 {registros.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="gestor-empty-row">
+                    <td colSpan={7} className="gestor-empty-row">
                       No se encontraron registros de vales con el filtro seleccionado.
                     </td>
                   </tr>
