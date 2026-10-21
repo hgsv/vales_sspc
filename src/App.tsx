@@ -1,24 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Login } from './components/Login';
-import { Dashboard } from './components/Dashboard/Dashboard'; 
+import { Dashboard } from './components/Dashboard/Dashboard';
 
 export const App: React.FC = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-
-    const [token, setToken] = useState(() => {
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
-    
-        if (tokenFromUrl || localStorage.getItem('auth_token')){
-            const activeToken = tokenFromUrl || localStorage.getItem('auth_token');
-            if (tokenFromUrl) {
-                localStorage.setItem('auth_token', tokenFromUrl);
-            }
-            window.history.replaceState({}, document.title, window.location.pathname);
-            setIsAuthenticated(true);
-            return activeToken;
+        const storedToken = localStorage.getItem('auth_token');
+
+        if (tokenFromUrl) {
+            localStorage.setItem('auth_token', tokenFromUrl);
         }
-        return localStorage.getItem('auth_token');
+
+        if (tokenFromUrl || storedToken) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return true;
+        }
+
+        return false;
     });
 
     return (
