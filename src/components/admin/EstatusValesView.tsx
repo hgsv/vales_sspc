@@ -1,48 +1,132 @@
 import React, { useEffect, useState } from 'react';
 import { API_ENDPOINTS, apiUrl } from '../../config/api';
-import "../gestor/GestorView.css";
+import '../gestor/GestorView.css';
 
 interface RegistroVale {
-  idRegister: number | string;
+  idRegister?: number | string;
+  idregister?: number | string;
+  IDREGISTER?: number | string;
+
+  idStatus?: number | string;
+  idstatus?: number | string;
+  IDSTATUS?: number | string;
+
+  NOMBRECOMPLETO?: string;
+  nombrecompleto?: string;
+  nombreCompleto?: string;
+
   numEmpleado?: string;
   numempleado?: string;
+  NUMEMPLEADO?: string;
+
   nomEmpleado?: string;
   nomempleado?: string;
+  NOMEMPLEADO?: string;
+
   appEmpleado?: string;
   appempleado?: string;
-  rfc: string;
-  curp: string;
+  APPEMPLEADO?: string;
+
+  rfc?: string;
+  RFC?: string;
+
+  curp?: string;
+  CURP?: string;
+
   cuentaInicial?: string;
   cuentainicial?: string;
-  idStatus: number;
+  CUENTAINICIAL?: string;
 }
+
+type CampoFiltro = 'numero' | 'nombre' | 'rfc' | 'curp' | 'cuenta' | 'estatus';
 
 export function EstatusValesView() {
   const [registros, setRegistros] = useState<RegistroVale[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
   const [fileName, setFileName] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // Estado para guardar el archivo temporalmente
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const [filtros, setFiltros] = useState<Record<CampoFiltro, string>>({
+    numero: '',
+    nombre: '',
+    rfc: '',
+    curp: '',
+    cuenta: '',
+    estatus: '',
+  });
+
+  const [seleccionadosIds, setSeleccionadosIds] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [descargandoFormatos, setDescargandoFormatos] = useState(false);
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
+
+  const obtenerId = (reg: RegistroVale) =>
+    reg.idRegister ?? reg.idregister ?? reg.IDREGISTER;
+
+  const obtenerEstatus = (reg: RegistroVale) =>
+    Number(reg.idStatus ?? reg.idstatus ?? reg.IDSTATUS);
+
+  const obtenerNumeroEmpleado = (reg: RegistroVale) =>
+    reg.numEmpleado ?? reg.numempleado ?? reg.NUMEMPLEADO ?? '';
+
+  const obtenerNombreCompleto = (reg: RegistroVale) => {
+    const nombreGuardado =
+      reg.NOMBRECOMPLETO ?? reg.nombrecompleto ?? reg.nombreCompleto;
+
+    if (nombreGuardado?.trim()) {
+      return nombreGuardado.trim();
+    }
+
+    const nombre = reg.NOMEMPLEADO ?? reg.nomEmpleado ?? reg.nomempleado ?? '';
+    const apellido = reg.APPEMPLEADO ?? reg.appEmpleado ?? reg.appempleado ?? '';
+
+    return `${nombre} ${apellido}`.trim();
+  };
+
+  const obtenerRFC = (reg: RegistroVale) => reg.RFC ?? reg.rfc ?? '';
+  const obtenerCURP = (reg: RegistroVale) => reg.CURP ?? reg.curp ?? '';
+
+  const obtenerCuenta = (reg: RegistroVale) =>
+    reg.CUENTAINICIAL ?? reg.cuentaInicial ?? reg.cuentainicial ?? '';
 
   const fetchRegistros = async () => {
     setLoading(true);
     const token = localStorage.getItem('auth_token');
+
     try {
-      const response = await fetch(`${apiUrl('gestor/vales/registrados')}?estatus=${encodeURIComponent(filtroEstatus)}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+      const response = await fetch(
+        `${apiUrl('gestor/vales/registrados')}?estatus=${encodeURIComponent(
+          filtroEstatus
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
         }
-      });
+      );
+
       const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(data.message || `Error HTTP ${response.status} al consultar los vales.`);
+        throw new Error(
+          data.message || `Error HTTP ${response.status} al consultar los vales.`
+        );
       }
-      const listaRegistros = data.data || data.registros || (Array.isArray(data) ? data : []);
+
+      const listaRegistros =
+        data.data || data.registros || (Array.isArray(data) ? data : []);
+
       setRegistros(listaRegistros);
+      setSeleccionadosIds(new Set());
+      setPagina(1);
     } catch (error) {
       console.error('Error al obtener registros de vales:', error);
       setRegistros([]);
+      setSeleccionadosIds(new Set());
     } finally {
       setLoading(false);
     }
@@ -50,25 +134,132 @@ export function EstatusValesView() {
 
   useEffect(() => {
     fetchRegistros();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtroEstatus]);
 
-  const handleCambiarEstatus = async (idRegister: number | string, nuevoEstatus: number) => {
+  const actualizarFiltro = (campo: CampoFiltro, valor: string) => {
+    setFiltros((actuales) => ({
+      ...actuales,
+      [campo]: valor,
+    }));
+    setPagina(1);
+  };
+
+  const cambiarSeleccion = (id: number | string | undefined) => {
+    if (id === undefined || id === null) return;
+
+    const clave = String(id);
+
+    setSeleccionadosIds((actuales) => {
+      const nuevos = new Set(actuales);
+
+      if (nuevos.has(clave)) {
+        nuevos.delete(clave);
+      } else {
+        nuevos.add(clave);
+      }
+
+      return nuevos;
+    });
+  };
+
+  const descargarFormatosSeleccionados = async () => {
+    if (seleccionadosIds.size === 0) {
+      alert('Selecciona al menos un registro para descargar sus formatos.');
+      return;
+    }
+
     const token = localStorage.getItem('auth_token');
+    setDescargandoFormatos(true);
+
     try {
-      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/actualizar-estatus`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ idRegister, idStatus: nuevoEstatus })
-      });
+      for (const id of seleccionadosIds) {
+        const response = await fetch(
+          `${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos/${encodeURIComponent(
+            id
+          )}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/pdf',
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response
+            .json()
+            .catch(() => ({
+              message: `No se pudieron generar los formatos del registro ${id}.`,
+            }));
+
+          throw new Error(
+            error.message || `Error al descargar el registro ${id}.`
+          );
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const enlace = document.createElement('a');
+
+        enlace.href = url;
+        enlace.download = `formatos_vales_${id}.pdf`;
+        document.body.appendChild(enlace);
+        enlace.click();
+        enlace.remove();
+
+        window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+
+        // Pausa breve entre archivos para que el navegador inicie cada descarga.
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+      }
+
+      setSeleccionadosIds(new Set());
+    } catch (error) {
+      console.error('Error al descargar formatos seleccionados:', error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'Error al descargar los formatos.'
+      );
+    } finally {
+      setDescargandoFormatos(false);
+    }
+  };
+
+  const handleCambiarEstatus = async (
+    idRegister: number | string,
+    nuevoEstatus: number
+  ) => {
+    const token = localStorage.getItem('auth_token');
+
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/vales/actualizar-estatus`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            idRegister,
+            idStatus: nuevoEstatus,
+          }),
+        }
+      );
 
       const data = await response.json();
+
       if (response.ok && data.status) {
-        setRegistros(prev => prev.map(reg =>
-          reg.idRegister === idRegister ? { ...reg, idStatus: nuevoEstatus } : reg
-        ));
+        setRegistros((prev) =>
+          prev.map((reg) =>
+            String(obtenerId(reg)) === String(idRegister)
+              ? { ...reg, idStatus: nuevoEstatus }
+              : reg
+          )
+        );
       } else {
         alert(data.message || 'Error al actualizar el estatus.');
       }
@@ -78,16 +269,15 @@ export function EstatusValesView() {
     }
   };
 
-  // Solo almacena el archivo seleccionado localmente
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+
     if (file) {
       setSelectedFile(file);
       setFileName(file.name);
     }
   };
 
-  // Función que se ejecuta al presionar el botón "Agregar tarjetas"
   const handleEnviarArchivo = async () => {
     if (!selectedFile) {
       alert('Por favor selecciona un archivo primero.');
@@ -99,22 +289,27 @@ export function EstatusValesView() {
     formData.append('archivo', selectedFile);
 
     setLoading(true);
+
     try {
-      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/cargar-tarjetas`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-        body: formData
-      });
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/vales/cargar-tarjetas`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: formData,
+        }
+      );
 
       const data = await response.json();
+
       if (response.ok && data.status) {
         alert(data.message || 'Tarjetas cargadas y asociadas correctamente.');
         setSelectedFile(null);
         setFileName('');
-        fetchRegistros(); // Recarga la tabla para reflejar las cuentas asignadas
+        await fetchRegistros();
       } else {
         alert(data.message || 'Error al procesar el archivo.');
       }
@@ -126,15 +321,119 @@ export function EstatusValesView() {
     }
   };
 
+  const abrirFormato = async (idRegister: number | string | undefined) => {
+    if (idRegister === undefined || idRegister === null) {
+      alert('Error: El ID del registro no está definido.');
+      return;
+    }
+
+    const token = localStorage.getItem('auth_token');
+
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos/${encodeURIComponent(
+          String(idRegister)
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/pdf',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errData = await response
+          .json()
+          .catch(() => ({ message: 'Error desconocido' }));
+
+        alert(
+          `Error al generar PDF: ${errData.message || response.statusText}`
+        );
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      console.error('Error al descargar formatos:', error);
+      alert('Error de conexión al descargar formatos.');
+    }
+  };
+
+  const registrosFiltrados = registros.filter((reg) => {
+    const nombre = obtenerNombreCompleto(reg);
+    const estatus = obtenerEstatus(reg) === 2 ? 'entregada' : 'pendiente';
+
+    return (
+      String(obtenerNumeroEmpleado(reg))
+        .toLowerCase()
+        .includes(filtros.numero.toLowerCase()) &&
+      String(nombre)
+        .toLowerCase()
+        .includes(filtros.nombre.toLowerCase()) &&
+      String(obtenerRFC(reg))
+        .toLowerCase()
+        .includes(filtros.rfc.toLowerCase()) &&
+      String(obtenerCURP(reg))
+        .toLowerCase()
+        .includes(filtros.curp.toLowerCase()) &&
+      String(obtenerCuenta(reg) || 'sin asignación')
+        .toLowerCase()
+        .includes(filtros.cuenta.toLowerCase()) &&
+      estatus.includes(filtros.estatus.toLowerCase())
+    );
+  });
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(registrosFiltrados.length / porPagina)
+  );
+  const inicio = (pagina - 1) * porPagina;
+  const registrosPagina = registrosFiltrados.slice(inicio, inicio + porPagina);
+
+  const inputFiltroStyle: React.CSSProperties = {
+    boxSizing: 'border-box',
+    width: '100%',
+    minWidth: '90px',
+    padding: '6px 8px',
+    border: '1px solid #ced4da',
+    borderRadius: '4px',
+    fontSize: '12px',
+  };
 
   return (
     <div className="gestor-container">
-      <div className="gestor-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
+      <div
+        className="gestor-header"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          flexWrap: 'wrap',
+          gap: '15px',
+        }}
+      >
         <div>
-          <h2 className="gestor-title">Control y Entrega de Vales de Despensa</h2>
-          <p className="gestor-subtitle">Gestión de estatus (Pendiente / Entregada) para el personal registrado.</p>
+          <h2 className="gestor-title">
+            Control y Entrega de Vales de Despensa
+          </h2>
+          <p className="gestor-subtitle">
+            Gestión de estatus (Pendiente / Entregada) para el personal registrado.
+          </p>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            gap: '8px',
+          }}
+        >
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <label
               htmlFor="upload-tarjetas-input"
@@ -146,26 +445,29 @@ export function EstatusValesView() {
                 cursor: 'pointer',
                 backgroundColor: '#0284c7',
                 borderColor: '#0284c7',
-                margin: 0
+                margin: 0,
               }}
             >
               📁 Seleccionar Archivo
             </label>
+
             <input
               id="upload-tarjetas-input"
               type="file"
-              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+              accept=".csv,.txt,.xlsx,.xls"
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />
 
-            {/* Botón para procesar las tarjetas después de cargarlas */}
             {selectedFile && (
               <button
                 type="button"
                 onClick={handleEnviarArchivo}
                 className="btn-primary"
-                style={{ backgroundColor: '#16a34a', borderColor: '#16a34a' }}
+                style={{
+                  backgroundColor: '#16a34a',
+                  borderColor: '#16a34a',
+                }}
               >
                 ✅ Agregar tarjetas
               </button>
@@ -180,7 +482,16 @@ export function EstatusValesView() {
         </div>
       </div>
 
-      <div className="gestor-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        className="gestor-card"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
         <div>
           <span className="gestor-section-title">Filtrar por Estatus:</span>
           <select
@@ -194,9 +505,35 @@ export function EstatusValesView() {
             <option value="2">Entregadas</option>
           </select>
         </div>
-        <button onClick={fetchRegistros} className="btn-primary" style={{ marginTop: '20px' }}>
-          🔄 Actualizar Lista
-        </button>
+
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={fetchRegistros}
+            className="btn-primary"
+            style={{ marginTop: '20px' }}
+          >
+            🔄 Actualizar Lista
+          </button>
+
+          <button
+            type="button"
+            onClick={descargarFormatosSeleccionados}
+            className="btn-primary"
+            disabled={descargandoFormatos || seleccionadosIds.size === 0}
+            style={{
+              marginTop: '20px',
+              backgroundColor: '#0284c7',
+              opacity: seleccionadosIds.size === 0 ? 0.6 : 1,
+              cursor:
+                seleccionadosIds.size === 0 ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {descargandoFormatos
+              ? 'Descargando formatos...'
+              : `📄 Descargar formatos seleccionados (${seleccionadosIds.size})`}
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -207,131 +544,282 @@ export function EstatusValesView() {
             <table className="gestor-table">
               <thead>
                 <tr>
+                  <th style={{ textAlign: 'center' }}>Seleccionar</th>
                   <th>Núm. Emp</th>
                   <th>Nombre Completo</th>
                   <th>RFC</th>
                   <th>CURP</th>
                   <th>Cuenta Asignada</th>
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
-                  <th style={{ textAlign: 'center' }}>Acciones / Asignar Estatus</th>
+                  <th style={{ textAlign: 'center' }}>
+                    Acciones / Asignar Estatus
+                  </th>
+                </tr>
+
+                <tr>
+                  <th></th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por número de empleado"
+                      placeholder="Buscar..."
+                      value={filtros.numero}
+                      onChange={(e) =>
+                        actualizarFiltro('numero', e.target.value)
+                      }
+                    />
+                  </th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por nombre"
+                      placeholder="Buscar..."
+                      value={filtros.nombre}
+                      onChange={(e) =>
+                        actualizarFiltro('nombre', e.target.value)
+                      }
+                    />
+                  </th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por RFC"
+                      placeholder="Buscar..."
+                      value={filtros.rfc}
+                      onChange={(e) => actualizarFiltro('rfc', e.target.value)}
+                    />
+                  </th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por CURP"
+                      placeholder="Buscar..."
+                      value={filtros.curp}
+                      onChange={(e) =>
+                        actualizarFiltro('curp', e.target.value)
+                      }
+                    />
+                  </th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por cuenta asignada"
+                      placeholder="Buscar..."
+                      value={filtros.cuenta}
+                      onChange={(e) =>
+                        actualizarFiltro('cuenta', e.target.value)
+                      }
+                    />
+                  </th>
+                  <th>
+                    <select
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por estatus actual"
+                      value={filtros.estatus}
+                      onChange={(e) =>
+                        actualizarFiltro('estatus', e.target.value)
+                      }
+                    >
+                      <option value="">Todos</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="entregada">Entregada</option>
+                    </select>
+                  </th>
+                  <th></th>
                 </tr>
               </thead>
-              <tbody>
-                {registros.map((reg, index) => {
-                  const rowClass = index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd';
-                  const esEntregada = Number(reg.idStatus) === 2;
 
-                  const numEmp = reg.numEmpleado || reg.numempleado || '-';
-                  const nomEmp = reg.nomEmpleado || reg.nomempleado || '';
-                  const appEmp = reg.appEmpleado || reg.appempleado || '';
-                  const cuenta = reg.cuentaInicial || reg.cuentainicial || 'Sin asignación';
+              <tbody>
+                {registrosPagina.map((reg, index) => {
+                  const idRegister = obtenerId(reg);
+                  const esEntregada = obtenerEstatus(reg) === 2;
+                  const nombreCompleto = obtenerNombreCompleto(reg) || '-';
+                  const numEmp = obtenerNumeroEmpleado(reg) || '-';
+                  const rfc = obtenerRFC(reg) || '-';
+                  const curp = obtenerCURP(reg) || '-';
+                  const cuenta = obtenerCuenta(reg) || 'Sin asignación';
 
                   return (
-                    <tr key={reg.idRegister || index} className={rowClass}>
-                      <td className="gestor-td gestor-num-emp">{numEmp}</td>
-                      <td className="gestor-td">{[nomEmp, appEmp].filter(Boolean).join(' ')}</td>
-                      <td className="gestor-td gestor-mono">{reg.rfc}</td>
-                      <td className="gestor-td gestor-mono">{reg.curp}</td>
-                      <td className="gestor-td gestor-mono">{cuenta}</td>
+                    <tr
+                      key={idRegister ?? `${numEmp}-${inicio + index}`}
+                      className={
+                        index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'
+                      }
+                    >
                       <td className="gestor-td-center">
-                        <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          backgroundColor: esEntregada ? '#d4edda' : '#fff3cd',
-                          color: esEntregada ? '#155724' : '#856404'
-                        }}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Seleccionar formatos de ${nombreCompleto}`}
+                          checked={
+                            idRegister !== undefined &&
+                            seleccionadosIds.has(String(idRegister))
+                          }
+                          onChange={() => cambiarSeleccion(idRegister)}
+                        />
+                      </td>
+
+                      <td className="gestor-td gestor-num-emp">{numEmp}</td>
+                      <td className="gestor-td">{nombreCompleto}</td>
+                      <td className="gestor-td gestor-mono">{rfc}</td>
+                      <td className="gestor-td gestor-mono">{curp}</td>
+                      <td className="gestor-td gestor-mono">{cuenta}</td>
+
+                      <td className="gestor-td-center">
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            backgroundColor: esEntregada ? '#d4edda' : '#fff3cd',
+                            color: esEntregada ? '#155724' : '#856404',
+                          }}
+                        >
                           {esEntregada ? 'Entregada' : 'Pendiente'}
                         </span>
                       </td>
-                      <td className="gestor-td-center" style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            // Validar que el ID exista antes de hacer el fetch
-                            const idReg = reg.idRegister || (reg as any).idregister;
-                            if (!idReg) {
-                              alert('Error: El ID del registro no está definido.');
-                              return;
-                            }
 
-                            const token = localStorage.getItem('auth_token');
-                            try {
-                              const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos/${idReg}`, {
-                                headers: {
-                                  'Authorization': `Bearer ${token}`
-                                }
-                              });
-                              if (response.ok) {
-                                const blob = await response.blob();
-                                const url = window.URL.createObjectURL(blob);
-                                window.open(url, '_blank');
-                              } else {
-                                const errData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-                                console.error('Error del backend:', errData);
-                                alert(`Error al generar PDF: ${errData.message || response.statusText}`);
+                      <td
+                        className="gestor-td-center"
+                        style={{ textAlign: 'center' }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: '8px',
+                            justifyContent: 'center',
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => abrirFormato(idRegister)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '11px',
+                              backgroundColor: '#0284c7',
+                              color: '#fff',
+                              border: '1px solid #0284c7',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            📄 Descarga de formatos
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (idRegister !== undefined) {
+                                handleCambiarEstatus(idRegister, 1);
                               }
-                            } catch (err) {
-                              console.error(err);
-                              alert('Error de conexión al descargar formatos.');
-                            }
-                          }}
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '11px',
-                            backgroundColor: '#0284c7',
-                            color: '#fff',
-                            border: '1px solid #0284c7',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          📄 Descarga de formatos
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCambiarEstatus(reg.idRegister, 1)}
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '11px',
-                            backgroundColor: !esEntregada ? '#6c757d' : '#f8f9fa',
-                            color: !esEntregada ? '#fff' : '#333',
-                            border: '1px solid #ccc',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Marcar Pendiente
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleCambiarEstatus(reg.idRegister, 2)}
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '11px',
-                            backgroundColor: esEntregada ? '#28a745' : '#e2e6ea',
-                            color: esEntregada ? '#fff' : '#333',
-                            border: '1px solid #28a745',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Marcar Entregada
-                        </button>
+                            }}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '11px',
+                              backgroundColor: !esEntregada ? '#6c757d' : '#f8f9fa',
+                              color: !esEntregada ? '#fff' : '#333',
+                              border: '1px solid #ccc',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Marcar Pendiente
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (idRegister !== undefined) {
+                                handleCambiarEstatus(idRegister, 2);
+                              }
+                            }}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '11px',
+                              backgroundColor: esEntregada ? '#28a745' : '#e2e6ea',
+                              color: esEntregada ? '#fff' : '#333',
+                              border: '1px solid #28a745',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Marcar Entregada
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
                 })}
-                {registros.length === 0 && (
+
+                {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="gestor-empty-row">
-                      No se encontraron registros de vales con el filtro seleccionado.
+                    <td colSpan={8} className="gestor-empty-row">
+                      No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+              padding: '12px',
+            }}
+          >
+            <span>
+              {registrosFiltrados.length === 0
+                ? 'Sin resultados'
+                : `Mostrando ${inicio + 1}–${Math.min(
+                    inicio + porPagina,
+                    registrosFiltrados.length
+                  )} de ${registrosFiltrados.length}`}
+            </span>
+
+            <label>
+              Filas por página:{' '}
+              <select
+                value={porPagina}
+                onChange={(e) => {
+                  setPorPagina(Number(e.target.value));
+                  setPagina(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </label>
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setPagina((actual) => Math.max(1, actual - 1))}
+                disabled={pagina === 1}
+              >
+                Anterior
+              </button>
+
+              <span>
+                Página {pagina} de {totalPaginas}
+              </span>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPagina((actual) => Math.min(totalPaginas, actual + 1))
+                }
+                disabled={pagina >= totalPaginas}
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
       )}

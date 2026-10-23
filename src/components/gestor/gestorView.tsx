@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { API_ENDPOINTS } from '../../config/api';
 import './GestorView.css';
 import TexturaRoja from '../../images/textura-roja.png';
 import TexturaClara from '../../images/textura-roja2.png';
+import * as XLSX from 'xlsx';
 
 interface Empleado {
   num_empleado: string;
@@ -19,6 +20,7 @@ interface Empleado {
   modalidad?: string;
   ss?: string;
   origen: 'Sector Central' | 'GN';
+  unidad?: string;
 }
 
 export function GestorView() {
@@ -29,6 +31,10 @@ export function GestorView() {
   const [seleccionadosMap, setSeleccionadosMap] = useState<{ [key: string]: Empleado }>({});
   const [empleadosGuardadosMap, setEmpleadosGuardadosMap] = useState<{ [key: string]: Empleado }>({});
   const [loading, setLoading] = useState(false);
+
+  const [archivoCarga, setArchivoCarga] = useState<File | null>(null);
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false);
+  const archivoInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +127,7 @@ export function GestorView() {
       "Apellido Materno",
       "RFC",
       "CURP",
-      "Unidad / Nivel",
+      "UR / Nivel",
       "Detalle (SS / Cargo / Modalidad)"
     ];
 
@@ -130,9 +136,8 @@ export function GestorView() {
         ? `SS: ${emp.ss || 'N/A'}`
         : `Cargo: ${emp.cargo || 'N/A'} | Mod: ${emp.modalidad || 'N/A'}`;
 
-      const unidadNivel = emp.origen === 'Sector Central'
-        ? `Unidad: ${emp.nivel || 'N/A'}`
-        : `UR: ${emp.clave_ur || 'N/A'} | Nivel: ${emp.nivel || 'N/A'}`;
+      const unidadNivel =
+        `UR: ${emp.unidad || 'N/A'} | Nivel: ${emp.nivel || 'N/A'}`;
 
       return [
         `"${emp.num_empleado || ''}"`,
@@ -167,7 +172,206 @@ export function GestorView() {
   const handleExportGuardados = () => {
     exportarEmpleados(Object.values(empleadosGuardadosMap));
   };
+  const normalizarEncabezado = (valor: unknown): string =>
+    String(valor ?? '')
+      .replace(/\uFEFF/g, '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
 
+  const handleSubirArchivo = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (origenSeleccionado !== 'SC' && origenSeleccionado !== 'GN') {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Selecciona el origen',
+        text: 'Elige Sector Central o Guardia Nacional antes de cargar el archivo.',
+        confirmButtonColor: '#800020'
+      });
+      return;
+    }
+
+    if (!archivoCarga) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Selecciona un archivo',
+        text: 'Adjunta un archivo Excel o CSV para continuar.',
+        confirmButtonColor: '#800020'
+      });
+      return;
+    }
+
+    const extension = archivoCarga.name.split('.').pop()?.toLowerCase();
+
+    if (!extension || !['xlsx', 'xls', 'csv'].includes(extension)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Formato no válido',
+        text: 'Selecciona un archivo .xlsx, .xls o .csv.',
+        confirmButtonColor: '#800020'
+      });
+      return;
+    }
+
+    setSubiendoArchivo(true);
+
+    try {
+      const contenido = await archivoCarga.arrayBuffer();
+      const libro = XLSX.read(contenido, { type: 'array', raw: false });
+      const primeraHoja = libro.Sheets[libro.SheetNames[0]];
+
+      if (!primeraHoja) {
+        throw new Error('El archivo no contiene una hoja con datos.');
+      }
+
+      const filas = XLSX.utils.sheet_to_json<unknown[]>(primeraHoja, {
+        header: 1,
+        defval: '',
+        raw: false
+      }) as unknown[][];
+
+      const encabezadosRequeridos = origenSeleccionado === 'GN'
+        ? [
+          'NUMEMP', 'NOMBRE', 'UR', 'RFC', 'CURP', 'NSS', 'NIVEL',
+          'PUESTO', 'UBICACIONFISICA', 'ENLACE', 'CLAVE', 'MODALIDAD'
+        ]
+        : [
+          'NUMEMP', 'NOMBRE', 'UR', 'RFC', 'CURP', 'NSS',
+          'ENLACE', 'NIVEL', 'PENSIONALIMENTICIA'
+        ];
+
+      const indiceEncabezados = filas.findIndex((fila) => {
+        const encabezados = fila.map(normalizarEncabezado);
+        return encabezados.includes('NUMEMP') && encabezados.includes('NOMBRE');
+      });
+
+      if (indiceEncabezados < 0) {
+        throw new Error('No encontré los encabezados NUMEMP y NOMBRE en el archivo.');
+      }
+
+      const encabezados = filas[indiceEncabezados].map(normalizarEncabezado);
+      const faltantes = encabezadosRequeridos.filter(
+        (requerido) => !encabezados.includes(requerido)
+      );
+
+      if (faltantes.length > 0) {
+        throw new Error(
+          `El encabezado no corresponde al formato ${origenSeleccionado}. Faltan: ${faltantes.join(', ')}.`
+        );
+      }
+
+      const valor = (fila: unknown[], nombreColumna: string): string => {
+        const posicion = encabezados.indexOf(nombreColumna);
+        return posicion < 0 ? '' : String(fila[posicion] ?? '').trim();
+      };
+
+      const empleados = filas
+        .slice(indiceEncabezados + 1)
+        .filter((fila) => fila.some((celda) => String(celda ?? '').trim() !== ''))
+        .map((fila, indice) => {
+          const empleado = {
+            num_empleado: valor(fila, 'NUMEMP'),
+            nombre_completo: valor(fila, 'NOMBRE'),
+            ur: valor(fila, 'UR'),
+            rfc: valor(fila, 'RFC'),
+            curp: valor(fila, 'CURP'),
+            nss: valor(fila, 'NSS'),
+            nivel: valor(fila, 'NIVEL'),
+            puesto: valor(fila, 'PUESTO'),
+            ubicacion: valor(fila, 'UBICACIONFISICA'),
+            enlace: valor(fila, 'ENLACE'),
+            clave: valor(fila, 'CLAVE'),
+            modalidad: valor(fila, 'MODALIDAD'),
+            pension: valor(fila, 'PENSIONALIMENTICIA'),
+            origen: origenSeleccionado
+          };
+
+          const faltanDatos = [
+            !empleado.num_empleado && 'NUMEMP',
+            !empleado.nombre_completo && 'NOMBRE',
+            !empleado.ur && 'UR',
+            !empleado.rfc && 'R.F.C.',
+            !empleado.curp && 'C.U.R.P.'
+          ].filter(Boolean);
+
+          if (faltanDatos.length > 0) {
+            throw new Error(
+              `La fila ${indice + indiceEncabezados + 2} no tiene: ${faltanDatos.join(', ')}.`
+            );
+          }
+
+          return empleado;
+        });
+
+      if (empleados.length === 0) {
+        throw new Error('El archivo no contiene filas de empleados.');
+      }
+
+      if (empleados.length > 5000) {
+        throw new Error('Puedes cargar un máximo de 5,000 empleados por archivo.');
+      }
+
+      const confirmacion = await Swal.fire({
+        icon: 'question',
+        title: 'Confirmar carga',
+        text: `Se guardarán ${empleados.length} registros de ${origenSeleccionado === 'GN' ? 'Guardia Nacional' : 'Sector Central'
+          }. ¿Deseas continuar?`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, guardar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#800020',
+        cancelButtonColor: '#6c757d'
+      });
+
+      if (!confirmacion.isConfirmed) return;
+
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/guardar-captura`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ empleados })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.status) {
+        const detalleErrores = Array.isArray(data.errors)
+          ? ` ${data.errors.join(' ')}`
+          : '';
+
+        throw new Error((data.message || 'No se pudo guardar el archivo.') + detalleErrores);
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Carga completada',
+        text: `Se guardaron ${data.total ?? empleados.length} registros correctamente.`,
+        confirmButtonColor: '#800020'
+      });
+
+      setArchivoCarga(null);
+      if (archivoInputRef.current) {
+        archivoInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Error al cargar archivo:', error);
+
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo cargar el archivo',
+        text: error instanceof Error ? error.message : 'Ocurrió un error al procesar el archivo.',
+        confirmButtonColor: '#800020'
+      });
+    } finally {
+      setSubiendoArchivo(false);
+    }
+  };
   const handleTerminarCaptura = async () => {
     const empleadosSeleccionados = Object.values(seleccionadosMap);
 
@@ -306,7 +510,43 @@ export function GestorView() {
             </div>
           </form>
         </div>
+        <div className="gestor-card" style={{ borderLeft: '4px solid #28a745' }}>
+          <h3 style={{ marginTop: 0, color: '#155724', fontSize: '16px' }}>
+            Cargar archivo de empleados
+          </h3>
 
+          <p style={{ fontSize: '13px', color: '#666' }}>
+            Selecciona primero el origen y carga el formato correspondiente. Se aceptan
+            archivos Excel y CSV.
+          </p>
+
+          <form onSubmit={handleSubirArchivo}>
+            <div className="gestor-input-wrapper">
+              <div>
+                <label className="gestor-input-label" htmlFor="archivo-empleados">
+                  ARCHIVO EXCEL O CSV
+                </label>
+                <input
+                  ref={archivoInputRef}
+                  id="archivo-empleados"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) => setArchivoCarga(e.target.files?.[0] ?? null)}
+                  className="gestor-text-input"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={subiendoArchivo}
+                style={{ marginTop: '18px' }}
+              >
+                {subiendoArchivo ? 'Procesando archivo...' : 'Cargar y guardar'}
+              </button>
+            </div>
+          </form>
+        </div>
         <div className="gestor-card" style={{ borderLeft: '4px solid #800020' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
             <div>
@@ -432,11 +672,9 @@ export function GestorView() {
                         <td className="gestor-td gestor-text-muted gestor-mono">{emp.rfc}</td>
                         <td className="gestor-td gestor-text-muted gestor-mono">{emp.curp}</td>
                         <td className="gestor-td gestor-text-muted">
-                          {emp.origen === 'Sector Central' ? (
-                            <span>Unidad: {emp.nivel || 'N/A'}</span>
-                          ) : (
-                            <span>UR: {emp.clave_ur || 'N/A'} | Nivel: {emp.nivel || 'N/A'}</span>
-                          )}
+                          <span>
+                            UR: {emp.unidad || 'N/A'} | Nivel: {emp.nivel || 'N/A'}
+                          </span>
                         </td>
                         <td className="gestor-td gestor-text-muted">
                           {emp.origen === 'Sector Central' ? (
