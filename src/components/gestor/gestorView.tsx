@@ -23,13 +23,24 @@ interface Empleado {
   unidad?: string;
 }
 
-export function GestorView() {
+interface GestorViewProps {
+  origenUsuario: string;
+}
+
+export function GestorView({ origenUsuario }: GestorViewProps) {
+  const origenNormalizado = origenUsuario.trim().toLowerCase();
+  const origenSeleccionado: 'SC' | 'GN' =
+    origenNormalizado === 'sspc' ? 'SC' : 'GN';
+
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [numEmpleadoInput, setNumEmpleadoInput] = useState('');
-  const [origenSeleccionado, setOrigenSeleccionado] = useState<'SC' | 'GN' | 'ambos'>('ambos');
 
-  const [seleccionadosMap, setSeleccionadosMap] = useState<{ [key: string]: Empleado }>({});
-  const [empleadosGuardadosMap, setEmpleadosGuardadosMap] = useState<{ [key: string]: Empleado }>({});
+  const [seleccionadosMap, setSeleccionadosMap] = useState<{
+    [key: string]: Empleado;
+  }>({});
+  const [empleadosGuardadosMap, setEmpleadosGuardadosMap] = useState<{
+    [key: string]: Empleado;
+  }>({});
   const [loading, setLoading] = useState(false);
 
   const [archivoCarga, setArchivoCarga] = useState<File | null>(null);
@@ -44,7 +55,7 @@ export function GestorView() {
         icon: 'warning',
         title: 'Campo vacío',
         text: 'Por favor, ingresa un número de empleado para realizar la búsqueda.',
-        confirmButtonColor: '#800020'
+        confirmButtonColor: '#800020',
       });
       return;
     }
@@ -53,34 +64,47 @@ export function GestorView() {
     const token = localStorage.getItem('auth_token');
 
     try {
+      const params = new URLSearchParams({
+        num_empleado: numEmpleadoInput.trim(),
+        origen: origenSeleccionado,
+      });
+
       const response = await fetch(
-        `${API_ENDPOINTS.MAIN}/gestor/empleados?num_empleado=${numEmpleadoInput.trim()}&origen=${origenSeleccionado}`,
+        `${API_ENDPOINTS.MAIN}/gestor/empleados?${params.toString()}`,
         {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
         }
       );
+
       const data = await response.json();
-      if (data.status) {
-        setEmpleados(data.data);
-        if (data.data.length === 0) {
-          Swal.fire({
-            icon: 'info',
-            title: 'Sin resultados',
-            text: 'No se encontró ningún registro con ese número de empleado en el origen seleccionado.',
-            confirmButtonColor: '#800020'
-          });
-        }
+
+      if (!response.ok || !data.status) {
+        throw new Error(data.message || 'No se pudo consultar el empleado.');
+      }
+
+      setEmpleados(data.data ?? []);
+
+      if (!data.data || data.data.length === 0) {
+        Swal.fire({
+          icon: 'info',
+          title: 'Sin resultados',
+          text: 'No se encontró ningún registro con ese número de empleado en el origen asignado.',
+          confirmButtonColor: '#800020',
+        });
       }
     } catch (error) {
       console.error('Error al obtener empleado:', error);
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Ocurrió un error al consultar el servidor.',
-        confirmButtonColor: '#800020'
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al consultar el servidor.',
+        confirmButtonColor: '#800020',
       });
     } finally {
       setLoading(false);
@@ -89,19 +113,22 @@ export function GestorView() {
 
   const handleToggleSelect = (emp: Empleado) => {
     const key = `${emp.origen}_${emp.num_empleado}`;
-    setSeleccionadosMap(prev => {
+
+    setSeleccionadosMap((prev) => {
       const nuevo = { ...prev };
+
       if (nuevo[key]) {
         delete nuevo[key];
       } else {
         nuevo[key] = emp;
       }
+
       return nuevo;
     });
   };
 
   const handleRemoveSeleccionado = (key: string) => {
-    setSeleccionadosMap(prev => {
+    setSeleccionadosMap((prev) => {
       const nuevo = { ...prev };
       delete nuevo[key];
       return nuevo;
@@ -114,49 +141,58 @@ export function GestorView() {
         icon: 'info',
         title: 'Aviso',
         text: 'No hay empleados para exportar.',
-        confirmButtonColor: '#800020'
+        confirmButtonColor: '#800020',
       });
       return;
     }
 
     const headers = [
-      "Num. Empleado",
-      "Origen",
-      "Nombre",
-      "Apellido Paterno",
-      "Apellido Materno",
-      "RFC",
-      "CURP",
-      "UR / Nivel",
-      "Detalle (SS / Cargo / Modalidad)"
+      'Num. Empleado',
+      'Origen',
+      'Nombre',
+      'Apellido Paterno',
+      'Apellido Materno',
+      'RFC',
+      'CURP',
+      'UR / Nivel',
+      'Detalle (SS / Cargo / Modalidad)',
     ];
 
-    const rows = empleadosParaExportar.map(emp => {
-      const detalle = emp.origen === 'Sector Central'
-        ? `SS: ${emp.ss || 'N/A'}`
-        : `Cargo: ${emp.cargo || 'N/A'} | Mod: ${emp.modalidad || 'N/A'}`;
+    const rows = empleadosParaExportar.map((emp) => {
+      const detalle =
+        emp.origen === 'Sector Central'
+          ? `SS: ${emp.ss || 'N/A'}`
+          : `Cargo: ${emp.cargo || 'N/A'} | Mod: ${emp.modalidad || 'N/A'}`;
 
-      const unidadNivel =
-        `UR: ${emp.unidad || 'N/A'} | Nivel: ${emp.nivel || 'N/A'}`;
+      const unidadNivel = `UR: ${emp.unidad || 'N/A'} | Nivel: ${emp.nivel || 'N/A'
+        }`;
 
-      return [
-        `"${emp.num_empleado || ''}"`,
-        `"${emp.origen || ''}"`,
-        `"${emp.nombre || ''}"`,
-        `"${emp.apellido_paterno || ''}"`,
-        `"${emp.apellido_materno || ''}"`,
-        `"${emp.rfc || ''}"`,
-        `"${emp.curp || ''}"`,
-        `"${unidadNivel}"`,
-        `"${detalle}"`
+      const valores = [
+        emp.num_empleado || '',
+        emp.origen || '',
+        emp.nombre || '',
+        emp.apellido_paterno || '',
+        emp.apellido_materno || '',
+        emp.rfc || '',
+        emp.curp || '',
+        unidadNivel,
+        detalle,
       ];
+
+      return valores
+        .map((valor) => `"${String(valor).replace(/"/g, '""')}"`)
+        .join(',');
     });
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const csvContent =
+      '\uFEFF' + [headers.join(','), ...rows].join('\n');
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
+
     a.href = url;
     a.download = `empleados_seleccionados_${Date.now()}.csv`;
     document.body.appendChild(a);
@@ -172,6 +208,7 @@ export function GestorView() {
   const handleExportGuardados = () => {
     exportarEmpleados(Object.values(empleadosGuardadosMap));
   };
+
   const normalizarEncabezado = (valor: unknown): string =>
     String(valor ?? '')
       .replace(/\uFEFF/g, '')
@@ -180,25 +217,17 @@ export function GestorView() {
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, '');
 
-  const handleSubirArchivo = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubirArchivo = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
-
-    if (origenSeleccionado !== 'SC' && origenSeleccionado !== 'GN') {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Selecciona el origen',
-        text: 'Elige Sector Central o Guardia Nacional antes de cargar el archivo.',
-        confirmButtonColor: '#800020'
-      });
-      return;
-    }
 
     if (!archivoCarga) {
       Swal.fire({
         icon: 'warning',
         title: 'Selecciona un archivo',
         text: 'Adjunta un archivo Excel o CSV para continuar.',
-        confirmButtonColor: '#800020'
+        confirmButtonColor: '#800020',
       });
       return;
     }
@@ -210,7 +239,7 @@ export function GestorView() {
         icon: 'error',
         title: 'Formato no válido',
         text: 'Selecciona un archivo .xlsx, .xls o .csv.',
-        confirmButtonColor: '#800020'
+        confirmButtonColor: '#800020',
       });
       return;
     }
@@ -229,47 +258,79 @@ export function GestorView() {
       const filas = XLSX.utils.sheet_to_json<unknown[]>(primeraHoja, {
         header: 1,
         defval: '',
-        raw: false
+        raw: false,
       }) as unknown[][];
 
-      const encabezadosRequeridos = origenSeleccionado === 'GN'
-        ? [
-          'NUMEMP', 'NOMBRE', 'UR', 'RFC', 'CURP', 'NSS', 'NIVEL',
-          'PUESTO', 'UBICACIONFISICA', 'ENLACE', 'CLAVE', 'MODALIDAD'
-        ]
-        : [
-          'NUMEMP', 'NOMBRE', 'UR', 'RFC', 'CURP', 'NSS',
-          'ENLACE', 'NIVEL', 'PENSIONALIMENTICIA'
-        ];
+      const encabezadosRequeridos =
+        origenSeleccionado === 'GN'
+          ? [
+            'NUMEMP',
+            'NOMBRE',
+            'UR',
+            'RFC',
+            'CURP',
+            'NSS',
+            'NIVEL',
+            'PUESTO',
+            'UBICACIONFISICA',
+            'ENLACE',
+            'CLAVE',
+            'MODALIDAD',
+          ]
+          : [
+            'NUMEMP',
+            'NOMBRE',
+            'UR',
+            'RFC',
+            'CURP',
+            'NSS',
+            'ENLACE',
+            'NIVEL',
+            'PENSIONALIMENTICIA',
+          ];
 
       const indiceEncabezados = filas.findIndex((fila) => {
         const encabezados = fila.map(normalizarEncabezado);
-        return encabezados.includes('NUMEMP') && encabezados.includes('NOMBRE');
+        return (
+          encabezados.includes('NUMEMP') &&
+          encabezados.includes('NOMBRE')
+        );
       });
 
       if (indiceEncabezados < 0) {
-        throw new Error('No encontré los encabezados NUMEMP y NOMBRE en el archivo.');
+        throw new Error(
+          'No encontré los encabezados NUMEMP y NOMBRE en el archivo.'
+        );
       }
 
-      const encabezados = filas[indiceEncabezados].map(normalizarEncabezado);
+      const encabezados = filas[indiceEncabezados].map(
+        normalizarEncabezado
+      );
+
       const faltantes = encabezadosRequeridos.filter(
         (requerido) => !encabezados.includes(requerido)
       );
 
       if (faltantes.length > 0) {
         throw new Error(
-          `El encabezado no corresponde al formato ${origenSeleccionado}. Faltan: ${faltantes.join(', ')}.`
+          `El encabezado no corresponde al formato ${origenSeleccionado}. Faltan: ${faltantes.join(
+            ', '
+          )}.`
         );
       }
 
       const valor = (fila: unknown[], nombreColumna: string): string => {
         const posicion = encabezados.indexOf(nombreColumna);
-        return posicion < 0 ? '' : String(fila[posicion] ?? '').trim();
+        return posicion < 0
+          ? ''
+          : String(fila[posicion] ?? '').trim();
       };
 
-      const empleados = filas
+      const empleadosArchivo = filas
         .slice(indiceEncabezados + 1)
-        .filter((fila) => fila.some((celda) => String(celda ?? '').trim() !== ''))
+        .filter((fila) =>
+          fila.some((celda) => String(celda ?? '').trim() !== '')
+        )
         .map((fila, indice) => {
           const empleado = {
             num_empleado: valor(fila, 'NUMEMP'),
@@ -285,58 +346,66 @@ export function GestorView() {
             clave: valor(fila, 'CLAVE'),
             modalidad: valor(fila, 'MODALIDAD'),
             pension: valor(fila, 'PENSIONALIMENTICIA'),
-            origen: origenSeleccionado
+            origen: origenSeleccionado,
           };
 
-          const faltanDatos = [
+          const datosFaltantes = [
             !empleado.num_empleado && 'NUMEMP',
             !empleado.nombre_completo && 'NOMBRE',
             !empleado.ur && 'UR',
             !empleado.rfc && 'R.F.C.',
-            !empleado.curp && 'C.U.R.P.'
+            !empleado.curp && 'C.U.R.P.',
           ].filter(Boolean);
 
-          if (faltanDatos.length > 0) {
+          if (datosFaltantes.length > 0) {
             throw new Error(
-              `La fila ${indice + indiceEncabezados + 2} no tiene: ${faltanDatos.join(', ')}.`
+              `La fila ${indice + indiceEncabezados + 2
+              } no tiene: ${datosFaltantes.join(', ')}.`
             );
           }
 
           return empleado;
         });
 
-      if (empleados.length === 0) {
+      if (empleadosArchivo.length === 0) {
         throw new Error('El archivo no contiene filas de empleados.');
       }
 
-      if (empleados.length > 5000) {
-        throw new Error('Puedes cargar un máximo de 5,000 empleados por archivo.');
+      if (empleadosArchivo.length > 5000) {
+        throw new Error(
+          'Puedes cargar un máximo de 5,000 empleados por archivo.'
+        );
       }
 
       const confirmacion = await Swal.fire({
         icon: 'question',
         title: 'Confirmar carga',
-        text: `Se guardarán ${empleados.length} registros de ${origenSeleccionado === 'GN' ? 'Guardia Nacional' : 'Sector Central'
+        text: `Se guardarán ${empleadosArchivo.length} registros de ${origenSeleccionado === 'GN'
+            ? 'Guardia Nacional'
+            : 'Sector Central'
           }. ¿Deseas continuar?`,
         showCancelButton: true,
         confirmButtonText: 'Sí, guardar',
         cancelButtonText: 'Cancelar',
         confirmButtonColor: '#800020',
-        cancelButtonColor: '#6c757d'
+        cancelButtonColor: '#6c757d',
       });
 
       if (!confirmacion.isConfirmed) return;
 
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/guardar-captura`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ empleados })
-      });
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/guardar-captura`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ empleados: empleadosArchivo }),
+        }
+      );
 
       const data = await response.json();
 
@@ -345,17 +414,22 @@ export function GestorView() {
           ? ` ${data.errors.join(' ')}`
           : '';
 
-        throw new Error((data.message || 'No se pudo guardar el archivo.') + detalleErrores);
+        throw new Error(
+          (data.message || 'No se pudo guardar el archivo.') +
+          detalleErrores
+        );
       }
 
       await Swal.fire({
         icon: 'success',
         title: 'Carga completada',
-        text: `Se guardaron ${data.total ?? empleados.length} registros correctamente.`,
-        confirmButtonColor: '#800020'
+        text: `Se guardaron ${data.total ?? empleadosArchivo.length
+          } registros correctamente.`,
+        confirmButtonColor: '#800020',
       });
 
       setArchivoCarga(null);
+
       if (archivoInputRef.current) {
         archivoInputRef.current.value = '';
       }
@@ -365,13 +439,17 @@ export function GestorView() {
       Swal.fire({
         icon: 'error',
         title: 'No se pudo cargar el archivo',
-        text: error instanceof Error ? error.message : 'Ocurrió un error al procesar el archivo.',
-        confirmButtonColor: '#800020'
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Ocurrió un error al procesar el archivo.',
+        confirmButtonColor: '#800020',
       });
     } finally {
       setSubiendoArchivo(false);
     }
   };
+
   const handleTerminarCaptura = async () => {
     const empleadosSeleccionados = Object.values(seleccionadosMap);
 
@@ -380,7 +458,7 @@ export function GestorView() {
         icon: 'warning',
         title: 'Sin selección',
         text: 'Por favor, selecciona al menos un empleado para registrar.',
-        confirmButtonColor: '#800020'
+        confirmButtonColor: '#800020',
       });
       return;
     }
@@ -393,7 +471,7 @@ export function GestorView() {
       confirmButtonText: 'Sí, registrar',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#800020',
-      cancelButtonColor: '#6c757d'
+      cancelButtonColor: '#6c757d',
     });
 
     if (!result.isConfirmed) return;
@@ -401,42 +479,54 @@ export function GestorView() {
     const token = localStorage.getItem('auth_token');
 
     try {
-      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/guardar-captura`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ empleados: empleadosSeleccionados })
-      });
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/guardar-captura`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            empleados: empleadosSeleccionados,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (response.ok && data.status) {
-        Swal.fire({
+        await Swal.fire({
           icon: 'success',
           title: '¡Registros guardados!',
           text: '¡Registros guardados exitosamente en la tabla registers!',
-          confirmButtonColor: '#800020'
+          confirmButtonColor: '#800020',
         });
-        setEmpleadosGuardadosMap(prev => ({ ...prev, ...seleccionadosMap }));
+
+        setEmpleadosGuardadosMap((prev) => ({
+          ...prev,
+          ...seleccionadosMap,
+        }));
         setSeleccionadosMap({});
       } else {
         Swal.fire({
           icon: 'error',
           title: 'Atención',
-          text: data.message || 'Ocurrió un error al intentar guardar los registros.',
-          confirmButtonColor: '#800020'
+          text:
+            data.message ||
+            'Ocurrió un error al intentar guardar los registros.',
+          confirmButtonColor: '#800020',
         });
       }
     } catch (error) {
       console.error('Error al guardar captura:', error);
+
       Swal.fire({
         icon: 'error',
         title: 'Error de conexión',
         text: 'Error de conexión con el servidor.',
-        confirmButtonColor: '#800020'
+        confirmButtonColor: '#800020',
       });
     }
   };
@@ -447,45 +537,49 @@ export function GestorView() {
   return (
     <div
       className="dashboard-container"
-      style={{ '--bg-claro': `url(${TexturaClara})` } as React.CSSProperties}
+      style={
+        { '--bg-claro': `url(${TexturaClara})` } as React.CSSProperties
+      }
     >
       <aside
         className="sidebar"
-        style={{ '--bg-rojo': `url(${TexturaRoja})` } as React.CSSProperties}
-      ></aside>
+        style={
+          { '--bg-rojo': `url(${TexturaRoja})` } as React.CSSProperties
+        }
+      />
 
       <div className="main-content-wrapper">
         <div className="gestor-header">
-          <h2 className="gestor-title">Gestión y Selección de Empleados</h2>
-          <p className="gestor-subtitle">Módulo de consulta centralizada para Vales de Despensa (Sector Central y Guardia Nacional).</p>
+          <h2 className="gestor-title">
+            Gestión y Selección de Empleados
+          </h2>
+          <p className="gestor-subtitle">
+            Módulo de consulta centralizada para Vales de Despensa
+            (Sector Central y Guardia Nacional).
+          </p>
         </div>
 
         <div className="gestor-card">
           <form onSubmit={handleSearch}>
             <div className="gestor-label-group">
-              <span className="gestor-section-title">BASE DE DATOS / ORIGEN DE CONSULTA:</span>
+              <span className="gestor-section-title">
+                BASE DE DATOS / ORIGEN DE CONSULTA:
+              </span>
+
               <div className="gestor-radio-group">
                 <label className="gestor-radio-label">
                   <input
                     type="radio"
                     name="origen"
-                    value="SC"
-                    checked={origenSeleccionado === 'SC'}
-                    onChange={() => setOrigenSeleccionado('SC')}
+                    value={origenSeleccionado}
+                    checked
+                    readOnly
                     className="gestor-radio-input"
                   />
-                  Sector Central
-                </label>
-                <label className="gestor-radio-label">
-                  <input
-                    type="radio"
-                    name="origen"
-                    value="GN"
-                    checked={origenSeleccionado === 'GN'}
-                    onChange={() => setOrigenSeleccionado('GN')}
-                    className="gestor-radio-input"
-                  />
-                  Guardia Nacional
+
+                  {origenSeleccionado === 'SC'
+                    ? 'Sector Central'
+                    : 'Guardia Nacional'}
                 </label>
               </div>
             </div>
@@ -493,37 +587,63 @@ export function GestorView() {
             <div className="gestor-actions">
               <div className="gestor-input-wrapper">
                 <div>
-                  <label className="gestor-input-label">NÚMERO DE EMPLEADO</label>
+                  <label className="gestor-input-label">
+                    NÚMERO DE EMPLEADO
+                  </label>
                   <input
                     type="text"
                     value={numEmpleadoInput}
-                    onChange={(e) => setNumEmpleadoInput(e.target.value)}
+                    onChange={(e) =>
+                      setNumEmpleadoInput(e.target.value)
+                    }
                     className="gestor-text-input"
                   />
                 </div>
+
                 <button type="submit" className="btn-primary">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="bi bi-search" viewBox="0 0 16 16">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    className="bi bi-search"
+                    viewBox="0 0 16 16"
+                  >
                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-                  </svg> Buscar Registro
+                  </svg>{' '}
+                  Buscar Registro
                 </button>
               </div>
             </div>
           </form>
         </div>
-        <div className="gestor-card" style={{ borderLeft: '4px solid #28a745' }}>
-          <h3 style={{ marginTop: 0, color: '#155724', fontSize: '16px' }}>
+
+        <div
+          className="gestor-card"
+          style={{ borderLeft: '4px solid #28a745' }}
+        >
+          <h3
+            style={{
+              marginTop: 0,
+              color: '#155724',
+              fontSize: '16px',
+            }}
+          >
             Cargar archivo de empleados
           </h3>
 
           <p style={{ fontSize: '13px', color: '#666' }}>
-            Selecciona primero el origen y carga el formato correspondiente. Se aceptan
-            archivos Excel y CSV.
+            Se cargará el formato correspondiente al origen asignado a tu
+            usuario. Se aceptan archivos Excel y CSV.
           </p>
 
           <form onSubmit={handleSubirArchivo}>
             <div className="gestor-input-wrapper">
               <div>
-                <label className="gestor-input-label" htmlFor="archivo-empleados">
+                <label
+                  className="gestor-input-label"
+                  htmlFor="archivo-empleados"
+                >
                   ARCHIVO EXCEL O CSV
                 </label>
                 <input
@@ -531,7 +651,9 @@ export function GestorView() {
                   id="archivo-empleados"
                   type="file"
                   accept=".xlsx,.xls,.csv"
-                  onChange={(e) => setArchivoCarga(e.target.files?.[0] ?? null)}
+                  onChange={(e) =>
+                    setArchivoCarga(e.target.files?.[0] ?? null)
+                  }
                   className="gestor-text-input"
                 />
               </div>
@@ -542,21 +664,44 @@ export function GestorView() {
                 disabled={subiendoArchivo}
                 style={{ marginTop: '18px' }}
               >
-                {subiendoArchivo ? 'Procesando archivo...' : 'Cargar y guardar'}
+                {subiendoArchivo
+                  ? 'Procesando archivo...'
+                  : 'Cargar y guardar'}
               </button>
             </div>
           </form>
         </div>
-        <div className="gestor-card" style={{ borderLeft: '4px solid #800020' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+
+        <div
+          className="gestor-card"
+          style={{ borderLeft: '4px solid #800020' }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '15px',
+            }}
+          >
             <div>
-              <h3 style={{ margin: '0 0 5px 0', color: '#6b0f1a', fontSize: '16px' }}>
-                Lote de Empleados Listos para Exportar ({listaSeleccionados.length})
+              <h3
+                style={{
+                  margin: '0 0 5px 0',
+                  color: '#6b0f1a',
+                  fontSize: '16px',
+                }}
+              >
+                Lote de Empleados Listos para Exportar (
+                {listaSeleccionados.length})
               </h3>
               <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                Los empleados seleccionados se acumulan aquí para que puedas seguir buscando más registros.
+                Los empleados seleccionados se acumulan aquí para que puedas
+                seguir buscando más registros.
               </p>
             </div>
+
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button
                 type="button"
@@ -566,6 +711,7 @@ export function GestorView() {
               >
                 Exportar Excel ({listaSeleccionados.length})
               </button>
+
               <button
                 type="button"
                 onClick={handleTerminarCaptura}
@@ -581,7 +727,10 @@ export function GestorView() {
             <div className="gestor-batch-container">
               {listaSeleccionados.map(([key, emp]) => (
                 <div key={key} className="gestor-batch-chip">
-                  <span><strong>{emp.num_empleado}</strong> - {emp.nombre} ({emp.origen})</span>
+                  <span>
+                    <strong>{emp.num_empleado}</strong> - {emp.nombre} (
+                    {emp.origen})
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleRemoveSeleccionado(key)}
@@ -595,33 +744,52 @@ export function GestorView() {
           )}
         </div>
 
-        {/* Panel de Registros Ya Guardados */}
         {listaGuardados.length > 0 && (
-          <div className="gestor-card" style={{ borderLeft: '4px solid #28a745', backgroundColor: '#f8f9fa' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+          <div
+            className="gestor-card"
+            style={{
+              borderLeft: '4px solid #28a745',
+              backgroundColor: '#f8f9fa',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
+              }}
+            >
               <div>
-                <h3 style={{ margin: '0 0 5px 0', color: '#155724', fontSize: '16px' }}>
-                  ✅ Registros Guardados Exitosamente ({listaGuardados.length})
+                <h3
+                  style={{
+                    margin: '0 0 5px 0',
+                    color: '#155724',
+                    fontSize: '16px',
+                  }}
+                >
+                  ✅ Registros Guardados Exitosamente (
+                  {listaGuardados.length})
                 </h3>
                 <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                  Estos registros ya fueron enviados al sistema, pero puedes descargarlos nuevamente cuando gustes.
+                  Estos registros ya fueron enviados al sistema, pero puedes
+                  descargarlos nuevamente cuando gustes.
                 </p>
               </div>
-              <div>
-                <button
-                  type="button"
-                  onClick={handleExportGuardados}
-                  className="btn-success"
-                  style={{ marginTop: 0, backgroundColor: '#28a745' }}
-                >
-                  📥 Descargar Archivo Guardado ({listaGuardados.length})
-                </button>
-              </div>
+
+              <button
+                type="button"
+                onClick={handleExportGuardados}
+                className="btn-success"
+                style={{ marginTop: 0, backgroundColor: '#28a745' }}
+              >
+                📥 Descargar Archivo Guardado ({listaGuardados.length})
+              </button>
             </div>
           </div>
         )}
 
-        {/* Tabla de Resultados */}
         {loading ? (
           <div className="gestor-loading">
             Consultando información en la base de datos institucional...
@@ -632,7 +800,9 @@ export function GestorView() {
               <table className="gestor-table">
                 <thead>
                   <tr>
-                    <th style={{ textAlign: 'center', width: '90px' }}>Seleccionar</th>
+                    <th style={{ textAlign: 'center', width: '90px' }}>
+                      Seleccionar
+                    </th>
                     <th>Núm. Emp</th>
                     <th>Origen</th>
                     <th>Nombre(s)</th>
@@ -644,11 +814,15 @@ export function GestorView() {
                     <th>SS / Cargo / Modalidad</th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {empleados.map((emp, index) => {
                     const key = `${emp.origen}_${emp.num_empleado}`;
                     const isChecked = !!seleccionadosMap[key];
-                    const rowClass = index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd';
+                    const rowClass =
+                      index % 2 === 0
+                        ? 'gestor-tr-even'
+                        : 'gestor-tr-odd';
 
                     return (
                       <tr key={key} className={rowClass}>
@@ -660,36 +834,64 @@ export function GestorView() {
                             className="gestor-checkbox"
                           />
                         </td>
-                        <td className="gestor-td gestor-num-emp">{emp.num_empleado}</td>
+
+                        <td className="gestor-td gestor-num-emp">
+                          {emp.num_empleado}
+                        </td>
+
                         <td className="gestor-td">
-                          <span className={emp.origen === 'Sector Central' ? 'badge-sc' : 'badge-gn'}>
+                          <span
+                            className={
+                              emp.origen === 'Sector Central'
+                                ? 'badge-sc'
+                                : 'badge-gn'
+                            }
+                          >
                             {emp.origen}
                           </span>
                         </td>
-                        <td className="gestor-td gestor-text-muted">{emp.nombre}</td>
-                        <td className="gestor-td gestor-text-muted">{emp.apellido_paterno || '—'}</td>
-                        <td className="gestor-td gestor-text-muted">{emp.apellido_materno || '—'}</td>
-                        <td className="gestor-td gestor-text-muted gestor-mono">{emp.rfc}</td>
-                        <td className="gestor-td gestor-text-muted gestor-mono">{emp.curp}</td>
+
                         <td className="gestor-td gestor-text-muted">
-                          <span>
-                            UR: {emp.unidad || 'N/A'} | Nivel: {emp.nivel || 'N/A'}
-                          </span>
+                          {emp.nombre}
                         </td>
+                        <td className="gestor-td gestor-text-muted">
+                          {emp.apellido_paterno || '—'}
+                        </td>
+                        <td className="gestor-td gestor-text-muted">
+                          {emp.apellido_materno || '—'}
+                        </td>
+                        <td className="gestor-td gestor-text-muted gestor-mono">
+                          {emp.rfc}
+                        </td>
+                        <td className="gestor-td gestor-text-muted gestor-mono">
+                          {emp.curp}
+                        </td>
+
+                        <td className="gestor-td gestor-text-muted">
+                          UR: {emp.unidad || 'N/A'} | Nivel:{' '}
+                          {emp.nivel || 'N/A'}
+                        </td>
+
                         <td className="gestor-td gestor-text-muted">
                           {emp.origen === 'Sector Central' ? (
                             <span>SS: {emp.ss || 'N/A'}</span>
                           ) : (
-                            <span>Cargo: {emp.cargo || 'N/A'} <br />Mod: {emp.modalidad || 'N/A'}</span>
+                            <span>
+                              Cargo: {emp.cargo || 'N/A'}
+                              <br />
+                              Mod: {emp.modalidad || 'N/A'}
+                            </span>
                           )}
                         </td>
                       </tr>
                     );
                   })}
+
                   {empleados.length === 0 && (
                     <tr>
                       <td colSpan={10} className="gestor-empty-row">
-                        No hay registros para mostrar. Ingrese un número de empleado y presione el botón de búsqueda.
+                        No hay registros para mostrar. Ingresa un número de
+                        empleado y presiona el botón de búsqueda.
                       </td>
                     </tr>
                   )}

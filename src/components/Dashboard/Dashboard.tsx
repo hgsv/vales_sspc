@@ -4,9 +4,7 @@ import { API_ENDPOINTS } from '../../config/api';
 import { GestorView } from '../gestor/gestorView';
 import { EstatusValesView } from '../admin/EstatusValesView';
 import { CardsView } from '../tarjetas/CardsView';
-
-// {activeTab === 'gestion-tarjetas' && user.idType === 1 && <CardsView />}
-// import { GestionTarjetasView } from '../admin/GestionTarjetasView';
+import { UsersView } from '../admin/UsersView';
 
 import TexturaRoja from '../../images/textura-roja.png';
 import TexturaClara from '../../images/textura-roja2.png';
@@ -23,11 +21,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
     email: '',
     nivel: '',
     unidad: '',
+    origen: '',
     idType: null as number | null,
   });
 
   const [roleName, setRoleName] = useState('Usuario');
-  const [activeTab, setActiveTab] = useState('inicio');
+  const [activeTab, setActiveTab] = useState('vales');
+
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -44,9 +44,9 @@ export function Dashboard({ onLogout }: DashboardProps) {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+            Accept: 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (response.status === 401) {
@@ -68,8 +68,12 @@ export function Dashboard({ onLogout }: DashboardProps) {
         const email = u.email || '';
         const nivel = u.nivel || '';
         const unidad = u.unidad || '';
+        const origen = u.origen || '';
 
-        const numericIdType = u.idtype !== null && u.idtype !== undefined ? Number(u.idtype) : null;
+        const numericIdType =
+          u.idtype !== null && u.idtype !== undefined
+            ? Number(u.idtype)
+            : null;
 
         setUser({
           firstName,
@@ -78,8 +82,13 @@ export function Dashboard({ onLogout }: DashboardProps) {
           email,
           nivel,
           unidad,
+          origen,
           idType: numericIdType,
         });
+
+        // Administradores comienzan en Control y Estatus.
+        // Los demás comienzan en Generación de Excel.
+        setActiveTab(numericIdType === 1 ? 'control-vales' : 'vales');
 
         switch (numericIdType) {
           case 1:
@@ -96,16 +105,17 @@ export function Dashboard({ onLogout }: DashboardProps) {
             break;
         }
       } catch (error) {
-        console.error("Error al consultar el perfil en el backend:", error);
+        console.error('Error al consultar el perfil en el backend:', error);
       } finally {
         setLoadingUser(false);
       }
     };
 
     fetchUserData();
-  }, []);
+  }, [onLogout]);
 
-  const fullName = `${user.firstName} ${user.lastName} ${user.middleName}`.trim();
+  const fullName =
+    `${user.firstName} ${user.lastName} ${user.middleName}`.trim();
 
   return (
     <div
@@ -119,7 +129,9 @@ export function Dashboard({ onLogout }: DashboardProps) {
         <div>
           <div className={styles.sidebarHeader}>
             <h2>Panel {roleName}</h2>
-            <p className={styles.systemName}>Medida de fin de año {new Date().getFullYear()}</p>
+            <p className={styles.systemName}>
+              Medida de fin de año {new Date().getFullYear()}
+            </p>
           </div>
 
           <div className={styles.userInfoCard}>
@@ -132,33 +144,30 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
 
           <nav className={styles.navMenu}>
-            <button
-              className={`${styles.navItem} ${activeTab === 'inicio' ? styles.active : ''}`}
-              onClick={() => setActiveTab('inicio')}
-            >
-              Inicio
-            </button>
-
-            <button
-              className={`${styles.navItem} ${activeTab === 'vales' ? styles.active : ''}`}
-              onClick={() => setActiveTab('vales')}
-            >
-              Generación de Excel
-            </button>
+            {user.idType !== 1 && (
+              <button
+                className={`${styles.navItem} ${activeTab === 'vales' ? styles.active : ''
+                  }`}
+                onClick={() => setActiveTab('vales')}
+              >
+                Generación de Excel
+              </button>
+            )}
 
             {user.idType === 1 && (
               <button
-                className={`${styles.navItem} ${activeTab === 'control-vales' ? styles.active : ''}`}
+                className={`${styles.navItem} ${activeTab === 'control-vales' ? styles.active : ''
+                  }`}
                 onClick={() => setActiveTab('control-vales')}
               >
                 Control y Estatus
               </button>
             )}
 
-            {/* NUEVA OPCIÓN: Gestión de tarjetas (Solo Administrador / idType === 1) */}
             {user.idType === 1 && (
               <button
-                className={`${styles.navItem} ${activeTab === 'gestion-tarjetas' ? styles.active : ''}`}
+                className={`${styles.navItem} ${activeTab === 'gestion-tarjetas' ? styles.active : ''
+                  }`}
                 onClick={() => setActiveTab('gestion-tarjetas')}
               >
                 Gestión de tarjetas
@@ -166,7 +175,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
             )}
 
             <button
-              className={`${styles.navItem} ${activeTab === 'reportes' ? styles.active : ''}`}
+              className={`${styles.navItem} ${activeTab === 'reportes' ? styles.active : ''
+                }`}
               onClick={() => setActiveTab('reportes')}
             >
               Reportes
@@ -174,7 +184,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
             {user.idType === 1 && (
               <button
-                className={`${styles.navItem} ${activeTab === 'usuarios' ? styles.active : ''}`}
+                className={`${styles.navItem} ${activeTab === 'usuarios' ? styles.active : ''
+                  }`}
                 onClick={() => setActiveTab('usuarios')}
               >
                 Usuarios
@@ -193,33 +204,33 @@ export function Dashboard({ onLogout }: DashboardProps) {
       <main className={styles.mainContent}>
         <header className={styles.topHeader}>
           <h1>Hola, {loadingUser ? '...' : user.firstName}</h1>
+
           <div className={styles.headerBadges}>
-            {user.unidad && <span className={styles.unitBadge}>Unidad: {user.unidad}</span>}
-            {user.nivel && <span className={styles.levelBadge}>Nivel: {user.nivel}</span>}
+            {user.unidad && (
+              <span className={styles.unitBadge}>Unidad: {user.unidad}</span>
+            )}
+            {user.nivel && (
+              <span className={styles.levelBadge}>Nivel: {user.nivel}</span>
+            )}
           </div>
         </header>
 
         <section className={styles.contentBody}>
-          {activeTab === 'inicio' && (
-            <div className={styles.card}>
-              <div className={styles.cardHeaderFlex}>
-                <div>
-                  <h2>Resumen General</h2>
-                  <p className={styles.secondaryText}>Bienvenido al Sistema de Medida de fin de año.</p>
-                </div>
-              </div>
-            </div>
+          {activeTab === 'vales' && user.idType !== 1 && (
+  <GestorView origenUsuario={user.origen} />
+)}
+
+          {activeTab === 'control-vales' && user.idType === 1 && (
+            <EstatusValesView />
           )}
 
-          {activeTab === 'vales' && <GestorView />}
-          {activeTab === 'control-vales' && user.idType === 1 && <EstatusValesView />}
-
-          {/* RENDERIZADO DE LA NUEVA VISTA */}
           {activeTab === 'gestion-tarjetas' && user.idType === 1 && (
             <div className={styles.card}>
               <h2>Gestión de tarjetas</h2>
-              <p className={styles.secondaryText}>Apartado exclusivo para la administración de tarjetas.</p>
-              {activeTab === 'gestion-tarjetas' && user.idType === 1 && <CardsView />}
+              <p className={styles.secondaryText}>
+                Apartado exclusivo para la administración de tarjetas.
+              </p>
+              <CardsView />
             </div>
           )}
 
@@ -230,12 +241,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
             </div>
           )}
 
-          {activeTab === 'usuarios' && user.idType === 1 && (
-            <div className={styles.card}>
-              <h2>Gestión de Usuarios</h2>
-              <p className={styles.secondaryText}>Apartado exclusivo para administradores.</p>
-            </div>
-          )}
+          {activeTab === 'usuarios' && user.idType === 1 && <UsersView />}
         </section>
       </main>
     </div>
