@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
