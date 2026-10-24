@@ -5,6 +5,7 @@ import { GestorView } from '../gestor/gestorView';
 import { EstatusValesView } from '../admin/EstatusValesView';
 import { CardsView } from '../tarjetas/CardsView';
 import { UsersView } from '../admin/UsersView';
+import { ReportsView } from '../admin/ReportsView';
 
 import TexturaRoja from '../../images/textura-roja.png';
 import TexturaClara from '../../images/textura-roja2.png';
@@ -235,10 +236,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           )}
 
           {activeTab === 'reportes' && (
-            <div className={styles.card}>
-              <h2>Módulo de Reportes</h2>
-              <p className={styles.secondaryText}>Apartado en construcción.</p>
-            </div>
+            <ReportsView />
           )}
 
           {activeTab === 'usuarios' && user.idType === 1 && <UsersView />}
