@@ -573,10 +573,7 @@ return (
     <div className="main-content-wrapper">
       <div className="gestor-header">
         <h2 className="gestor-title">
-          Selección de Personal Autorizado{' '}
-          {origenSeleccionado === 'SC'
-            ? 'Sector Central'
-            : 'Guardia Nacional'}
+          Selección de Personal Autorizado {nombreOrigen}
         </h2>
       </div>
 
