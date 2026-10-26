@@ -1,5 +1,5 @@
 const configuredApi = (import.meta as any).env.VITE_API_MAIN as string | undefined;
-const defaultApi = (import.meta as any).env.DEV ? 'http://10.106.1.49:9000/api' : '';
+const defaultApi = (import.meta as any).env.DEV ? 'http://localhost:9000/api' : '';
 const mainApi = (configuredApi || defaultApi).replace(/\/$/, '');
 
 export const API_ENDPOINTS = {

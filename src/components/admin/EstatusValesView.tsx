@@ -637,7 +637,7 @@ export function EstatusValesView() {
                   const numEmp = obtenerNumeroEmpleado(reg) || '-';
                   const rfc = obtenerRFC(reg) || '-';
                   const curp = obtenerCURP(reg) || '-';
-                  const cuenta = obtenerCuenta(reg) || 'Sin asignación';
+                  const cuenta = obtenerCuenta(reg);
 
                   return (
                     <tr
@@ -691,21 +691,23 @@ export function EstatusValesView() {
                             flexWrap: 'wrap',
                           }}
                         >
-                          <button
-                            type="button"
-                            onClick={() => abrirFormato(idRegister)}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: '11px',
-                              backgroundColor: '#0284c7',
-                              color: '#fff',
-                              border: '1px solid #0284c7',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            📄 Descarga de formatos
-                          </button>
+{cuenta && (
+  <button
+    type="button"
+    onClick={() => abrirFormato(idRegister)}
+    style={{
+      padding: '5px 10px',
+      fontSize: '11px',
+      backgroundColor: '#0284c7',
+      color: '#fff',
+      border: '1px solid #0284c7',
+      borderRadius: '4px',
+      cursor: 'pointer',
+    }}
+  >
+    📄 Descarga de formatos
+  </button>
+)}
 
                           <button
                             type="button"
