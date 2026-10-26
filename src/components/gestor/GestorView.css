@@ -397,3 +397,7 @@
     width: 100%;
   }
 }
+.gestor-table-card,
+.gestor-card {
+  margin-bottom: 20px;
+}
