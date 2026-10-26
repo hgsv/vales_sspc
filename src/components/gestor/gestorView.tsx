@@ -573,7 +573,8 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       <div className="main-content-wrapper">
         <div className="gestor-header">
           <h2 className="gestor-title">
-            Selección de Personal Autorizado {nombreOrigen.origen === 'SC' ? 'Sector Central' : 'Guardia Nacional'}
+            Selección de Personal Autorizado{' '}
+{origenSeleccionado === 'SC' ? 'Sector Central' : 'Guardia Nacional'}
           </h2>
         </div>
 
