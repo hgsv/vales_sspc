@@ -18,7 +18,7 @@ interface Empleado {
   domicilio?: string;
   clave_ur?: string;
   modalidad?: string;
-  ss?: string;
+  nss?: string;
   origen: 'Sector Central' | 'GN';
   unidad?: string;
 }
@@ -905,7 +905,7 @@ return (
                     <td>{emp.curp}</td>
                     <td>{emp.nss}</td>
                     <td>{emp.nivel}</td>
-                    <td>{emp.pension_alimenticia || 'N/A'}</td>
+                    <td>{emp.pension || 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>
