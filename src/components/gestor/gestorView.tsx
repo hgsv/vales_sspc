@@ -640,6 +640,7 @@ return (
                 <th>Unidad</th>
                 <th>RFC</th>
                 <th>CURP</th>
+                <th>NSS</th>
                 <th>Nivel</th>
                 <th>Pensión Alimenticia</th>
               </tr>
@@ -678,6 +679,9 @@ return (
                     </td>
                     <td className="gestor-td gestor-text-muted gestor-mono">
                       {emp.curp}
+                    </td>
+                    <td className="gestor-td gestor-text-muted">
+                      {emp.nss}
                     </td>
                     <td className="gestor-td gestor-text-muted">
                       {emp.nivel}
@@ -883,27 +887,25 @@ return (
                 <tr>
                   <th>Núm. Emp.</th>
                   <th>Nombre</th>
-                  <th>Origen</th>
                   <th>UR</th>
                   <th>RFC</th>
                   <th>CURP</th>
                   <th>NSS</th>
                   <th>Nivel</th>
-                  <th>Puesto</th>
+                  <th>Pensión Alimenticia</th>
                 </tr>
               </thead>
               <tbody>
                 {empleadosCargados.map((emp, index) => (
-                  <tr key={`${emp.origen}-${emp.num_empleado}-${index}`}>
+                  <tr key={`${emp.num_empleado}`}>
                     <td>{emp.num_empleado}</td>
                     <td>{emp.nombre_completo}</td>
-                    <td>{emp.origen}</td>
                     <td>{emp.ur}</td>
                     <td>{emp.rfc}</td>
                     <td>{emp.curp}</td>
                     <td>{emp.nss}</td>
                     <td>{emp.nivel}</td>
-                    <td>{emp.puesto}</td>
+                    <td>{emp.pension_alimenticia || 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>
