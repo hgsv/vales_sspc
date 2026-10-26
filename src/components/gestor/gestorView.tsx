@@ -182,7 +182,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
     const rows = empleadosParaExportar.map((emp) => {
       const detalle =
         emp.origen === 'Sector Central'
-          ? `SS: ${emp.ss || 'N/A'}`
+          ? `SS: ${emp.nss || 'N/A'}`
           : `Cargo: ${emp.cargo || 'N/A'} | Mod: ${emp.modalidad || 'N/A'}`;
 
       const unidadNivel = `UR: ${emp.unidad || 'N/A'} | Nivel: ${emp.nivel || 'N/A'
@@ -896,7 +896,7 @@ return (
                 </tr>
               </thead>
               <tbody>
-                {empleadosCargados.map((emp, index) => (
+                {empleadosCargados.map((emp) => (
                   <tr key={`${emp.num_empleado}`}>
                     <td>{emp.num_empleado}</td>
                     <td>{emp.nombre_completo}</td>
