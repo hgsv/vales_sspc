@@ -51,7 +51,8 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const origenNormalizado = origenUsuario.trim().toLowerCase();
   const origenSeleccionado: 'SC' | 'GN' =
     origenNormalizado === 'sspc' ? 'SC' : 'GN';
-
+  const nombreOrigen =
+    origenSeleccionado === 'SC' ? 'Sector Central' : 'Guardia Nacional';
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [numEmpleadoInput, setNumEmpleadoInput] = useState('');
 
@@ -439,7 +440,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
           detalleErrores
         );
       }
-setEmpleadosCargados(empleadosArchivo);
+      setEmpleadosCargados(empleadosArchivo);
       await Swal.fire({
         icon: 'success',
         title: 'Carga completada',
@@ -453,7 +454,7 @@ setEmpleadosCargados(empleadosArchivo);
       if (archivoInputRef.current) {
         archivoInputRef.current.value = '';
       }
-      
+
     } catch (error) {
       console.error('Error al cargar archivo:', error);
 
@@ -572,16 +573,13 @@ setEmpleadosCargados(empleadosArchivo);
       <div className="main-content-wrapper">
         <div className="gestor-header">
           <h2 className="gestor-title">
-            Selección de Personal Autorizado
+            Selección de Personal Autorizado {nombreOrigen.origen === 'SC' ? 'Sector Central' : 'Guardia Nacional'}
           </h2>
         </div>
 
         <div className="gestor-card">
           <form onSubmit={handleSearch}>
             <div className="gestor-label-group">
-              <span className="gestor-section-title">
-                BASE DE DATOS / ORIGEN DE CONSULTA:
-              </span>
 
               <div className="gestor-radio-group" style={{ display: 'none' }}>
                 <label className="gestor-radio-label">
@@ -600,36 +598,34 @@ setEmpleadosCargados(empleadosArchivo);
               </div>
             </div>
 
-            <div className="gestor-actions">
-              <div className="gestor-input-wrapper">
-                <div>
-                  <label className="gestor-input-label">
-                    NÚMERO DE EMPLEADO
-                  </label>
-                  <input
-                    type="text"
-                    value={numEmpleadoInput}
-                    onChange={(e) =>
-                      setNumEmpleadoInput(e.target.value)
-                    }
-                    className="gestor-text-input"
-                  />
-                </div>
-
-                <button type="submit" className="btn-primary">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    fill="currentColor"
-                    className="bi bi-search"
-                    viewBox="0 0 16 16"
-                  >
-                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-                  </svg>{' '}
-                  Búsqueda por empleado
-                </button>
+            <div className="gestor-input-wrapper">
+              <div>
+                <label className="gestor-input-label">
+                  NÚMERO DE EMPLEADO
+                </label>
+                <input
+                  type="text"
+                  value={numEmpleadoInput}
+                  onChange={(e) =>
+                    setNumEmpleadoInput(e.target.value)
+                  }
+                  className="gestor-text-input"
+                />
               </div>
+
+              <button type="submit" className="btn-primary">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  className="bi bi-search"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                </svg>{' '}
+                Búsqueda por empleado
+              </button>
             </div>
           </form>
         </div>
@@ -682,44 +678,44 @@ setEmpleadosCargados(empleadosArchivo);
             </div>
           </form>
         </div>
-{empleadosCargados.length > 0 && (
-  <div className="gestor-card">
-    <h3>Datos cargados ({empleadosCargados.length})</h3>
+        {empleadosCargados.length > 0 && (
+          <div className="gestor-card">
+            <h3>Datos cargados ({empleadosCargados.length})</h3>
 
-    <div className="gestor-table-wrapper" style={{ maxHeight: 400, overflow: 'auto' }}>
-      <table className="gestor-table">
-        <thead>
-          <tr>
-            <th>Núm. Emp.</th>
-            <th>Nombre</th>
-            <th>Origen</th>
-            <th>UR</th>
-            <th>RFC</th>
-            <th>CURP</th>
-            <th>NSS</th>
-            <th>Nivel</th>
-            <th>Puesto</th>
-          </tr>
-        </thead>
-        <tbody>
-          {empleadosCargados.map((emp, index) => (
-            <tr key={`${emp.origen}-${emp.num_empleado}-${index}`}>
-              <td>{emp.num_empleado}</td>
-              <td>{emp.nombre_completo}</td>
-              <td>{emp.origen}</td>
-              <td>{emp.ur}</td>
-              <td>{emp.rfc}</td>
-              <td>{emp.curp}</td>
-              <td>{emp.nss}</td>
-              <td>{emp.nivel}</td>
-              <td>{emp.puesto}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+            <div className="gestor-table-wrapper" style={{ maxHeight: 400, overflow: 'auto' }}>
+              <table className="gestor-table">
+                <thead>
+                  <tr>
+                    <th>Núm. Emp.</th>
+                    <th>Nombre</th>
+                    <th>Origen</th>
+                    <th>UR</th>
+                    <th>RFC</th>
+                    <th>CURP</th>
+                    <th>NSS</th>
+                    <th>Nivel</th>
+                    <th>Puesto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empleadosCargados.map((emp, index) => (
+                    <tr key={`${emp.origen}-${emp.num_empleado}-${index}`}>
+                      <td>{emp.num_empleado}</td>
+                      <td>{emp.nombre_completo}</td>
+                      <td>{emp.origen}</td>
+                      <td>{emp.ur}</td>
+                      <td>{emp.rfc}</td>
+                      <td>{emp.curp}</td>
+                      <td>{emp.nss}</td>
+                      <td>{emp.nivel}</td>
+                      <td>{emp.puesto}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
         <div
           className="gestor-card"
           style={{ borderLeft: '4px solid #800020' }}

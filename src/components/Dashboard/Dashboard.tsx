@@ -149,7 +149,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   }`}
                 onClick={() => setActiveTab('vales')}
               >
-                Selección de personal auroizado
+                Selección de personal autorizado
               </button>
             )}
 
