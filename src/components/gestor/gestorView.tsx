@@ -636,7 +636,6 @@ return (
                   Seleccionar
                 </th>
                 <th>Núm. Emp</th>
-                <th>Origen</th>
                 <th>Nombre(s)</th>
                 <th>Unidad</th>
                 <th>RFC</th>
@@ -667,19 +666,6 @@ return (
                     <td className="gestor-td gestor-num-emp">
                       {emp.num_empleado}
                     </td>
-
-                    <td className="gestor-td">
-                      <span
-                        className={
-                          emp.origen === 'Sector Central'
-                            ? 'badge-sc'
-                            : 'badge-gn'
-                        }
-                      >
-                        {emp.origen}
-                      </span>
-                    </td>
-
                     <td className="gestor-td gestor-text-muted">
                       {emp.nombre} {emp.apellido_paterno}{' '}
                       {emp.apellido_materno}

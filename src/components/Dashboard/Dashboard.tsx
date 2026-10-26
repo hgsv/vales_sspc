@@ -216,8 +216,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
         <section className={styles.contentBody}>
           {activeTab === 'vales' && user.idType !== 1 && (
-  <GestorView origenUsuario={user.origen} />
-)}
+            <GestorView origenUsuario={user.origen} />
+          )}
 
           {activeTab === 'control-vales' && user.idType === 1 && (
             <EstatusValesView />
