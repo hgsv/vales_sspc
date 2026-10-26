@@ -87,8 +87,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
           idType: numericIdType,
         });
 
-        // Administradores comienzan en Control y Estatus.
-        // Los demás comienzan en Generación de Excel.
         setActiveTab(numericIdType === 1 ? 'control-vales' : 'vales');
 
         switch (numericIdType) {
@@ -151,7 +149,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                   }`}
                 onClick={() => setActiveTab('vales')}
               >
-                Generación de Excel
+                Selección de personal auroizado
               </button>
             )}
 

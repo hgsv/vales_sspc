@@ -26,8 +26,28 @@ interface Empleado {
 interface GestorViewProps {
   origenUsuario: string;
 }
+type EmpleadoCargado = {
+  num_empleado: string;
+  nombre_completo: string;
+  ur: string;
+  rfc: string;
+  curp: string;
+  nss: string;
+  nivel: string;
+  puesto: string;
+  ubicacion: string;
+  enlace: string;
+  clave: string;
+  modalidad: string;
+  pension: string;
+  origen: string;
+};
+
 
 export function GestorView({ origenUsuario }: GestorViewProps) {
+  const [empleadosCargados, setEmpleadosCargados] =
+    useState<EmpleadoCargado[]>([]);
+
   const origenNormalizado = origenUsuario.trim().toLowerCase();
   const origenSeleccionado: 'SC' | 'GN' =
     origenNormalizado === 'sspc' ? 'SC' : 'GN';
@@ -299,7 +319,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
 
       if (indiceEncabezados < 0) {
         throw new Error(
-          'No encontré los encabezados NUMEMP y NOMBRE en el archivo.'
+          'No se encontraron los encabezados NUMEMP y NOMBRE en el archivo.'
         );
       }
 
@@ -419,7 +439,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
           detalleErrores
         );
       }
-
+setEmpleadosCargados(empleadosArchivo);
       await Swal.fire({
         icon: 'success',
         title: 'Carga completada',
@@ -433,6 +453,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       if (archivoInputRef.current) {
         archivoInputRef.current.value = '';
       }
+      
     } catch (error) {
       console.error('Error al cargar archivo:', error);
 
@@ -661,7 +682,44 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
             </div>
           </form>
         </div>
+{empleadosCargados.length > 0 && (
+  <div className="gestor-card">
+    <h3>Datos cargados ({empleadosCargados.length})</h3>
 
+    <div className="gestor-table-wrapper" style={{ maxHeight: 400, overflow: 'auto' }}>
+      <table className="gestor-table">
+        <thead>
+          <tr>
+            <th>Núm. Emp.</th>
+            <th>Nombre</th>
+            <th>Origen</th>
+            <th>UR</th>
+            <th>RFC</th>
+            <th>CURP</th>
+            <th>NSS</th>
+            <th>Nivel</th>
+            <th>Puesto</th>
+          </tr>
+        </thead>
+        <tbody>
+          {empleadosCargados.map((emp, index) => (
+            <tr key={`${emp.origen}-${emp.num_empleado}-${index}`}>
+              <td>{emp.num_empleado}</td>
+              <td>{emp.nombre_completo}</td>
+              <td>{emp.origen}</td>
+              <td>{emp.ur}</td>
+              <td>{emp.rfc}</td>
+              <td>{emp.curp}</td>
+              <td>{emp.nss}</td>
+              <td>{emp.nivel}</td>
+              <td>{emp.puesto}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
         <div
           className="gestor-card"
           style={{ borderLeft: '4px solid #800020' }}
