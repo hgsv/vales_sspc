@@ -381,8 +381,8 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
         icon: 'question',
         title: 'Confirmar carga',
         text: `Se guardarán ${empleadosArchivo.length} registros de ${origenSeleccionado === 'GN'
-            ? 'Guardia Nacional'
-            : 'Sector Central'
+          ? 'Guardia Nacional'
+          : 'Sector Central'
           }. ¿Deseas continuar?`,
         showCancelButton: true,
         confirmButtonText: 'Sí, guardar',
@@ -551,12 +551,8 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       <div className="main-content-wrapper">
         <div className="gestor-header">
           <h2 className="gestor-title">
-            Gestión y Selección de Empleados
+            Selección de Personal Autorizado
           </h2>
-          <p className="gestor-subtitle">
-            Módulo de consulta centralizada para Vales de Despensa
-            (Sector Central y Guardia Nacional).
-          </p>
         </div>
 
         <div className="gestor-card">
@@ -566,7 +562,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                 BASE DE DATOS / ORIGEN DE CONSULTA:
               </span>
 
-              <div className="gestor-radio-group">
+              <div className="gestor-radio-group" style={{ display: 'none' }}>
                 <label className="gestor-radio-label">
                   <input
                     type="radio"
@@ -576,7 +572,6 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                     readOnly
                     className="gestor-radio-input"
                   />
-
                   {origenSeleccionado === 'SC'
                     ? 'Sector Central'
                     : 'Guardia Nacional'}
@@ -611,7 +606,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                   >
                     <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
                   </svg>{' '}
-                  Buscar Registro
+                  Búsqueda por empleado
                 </button>
               </div>
             </div>
@@ -629,13 +624,8 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
               fontSize: '16px',
             }}
           >
-            Cargar archivo de empleados
+            Carga masiva de empleados.
           </h3>
-
-          <p style={{ fontSize: '13px', color: '#666' }}>
-            Se cargará el formato correspondiente al origen asignado a tu
-            usuario. Se aceptan archivos Excel y CSV.
-          </p>
 
           <form onSubmit={handleSubirArchivo}>
             <div className="gestor-input-wrapper">
@@ -697,8 +687,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                 {listaSeleccionados.length})
               </h3>
               <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                Los empleados seleccionados se acumulan aquí para que puedas
-                seguir buscando más registros.
+                Lista de empleados seleccionados hasta el momento
               </p>
             </div>
 

@@ -283,18 +283,23 @@ export function UsersView() {
                 ? apiUrl(`admin/users/${encodeURIComponent(usuarioEditando)}`)
                 : apiUrl('admin/users');
 
-            const payload: Record<string, unknown> = {
-                numEmpleado: formulario.numEmpleado.trim(),
-                origen: formulario.origen,
-                firstName: formulario.firstName.trim(),
-                lastName: formulario.lastName.trim(),
-                middleName: formulario.middleName.trim(),
-                nivel: formulario.nivel.trim(),
-                unidad: formulario.unidad.trim(),
-                email: formulario.email.trim(),
-                idType: Number(formulario.idType),
-                active: formulario.active ? 1 : 0,
-            };
+const payload: Record<string, unknown> = {
+    ...(editando ? { id_user: Number(usuarioEditando) } : {}),
+    numEmpleado: formulario.numEmpleado.trim(),
+    origen: formulario.origen,
+    firstName: formulario.firstName.trim(),
+    lastName: formulario.lastName.trim(),
+    middleName: formulario.middleName.trim(),
+    nivel: formulario.nivel.trim(),
+    unidad: formulario.unidad.trim(),
+    email: formulario.email.trim(),
+    idType: Number(formulario.idType),
+    active: formulario.active ? 1 : 0,
+};
+
+if (editando && nuevaPassword.trim()) {
+    payload.nuevaPassword = nuevaPassword;
+}
 
             if (editando && nuevaPassword.trim()) {
                 payload.nuevaPassword = nuevaPassword;
