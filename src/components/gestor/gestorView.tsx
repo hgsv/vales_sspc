@@ -556,232 +556,125 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const listaSeleccionados = Object.entries(seleccionadosMap);
   const listaGuardados = Object.entries(empleadosGuardadosMap);
 
-return (
-  <div
-    className="dashboard-container"
-    style={
-      { '--bg-claro': `url(${TexturaClara})` } as React.CSSProperties
-    }
-  >
-    <aside
-      className="sidebar"
+  return (
+    <div
+      className="dashboard-container"
       style={
-        { '--bg-rojo': `url(${TexturaRoja})` } as React.CSSProperties
+        { '--bg-claro': `url(${TexturaClara})` } as React.CSSProperties
       }
-    />
+    >
+      <aside
+        className="sidebar"
+        style={
+          { '--bg-rojo': `url(${TexturaRoja})` } as React.CSSProperties
+        }
+      />
 
-    <div className="main-content-wrapper">
-      <div className="gestor-header">
-        <h2 className="gestor-title">
-          Selección de Personal Autorizado {nombreOrigen}
-        </h2>
-      </div>
-
-      <div className="gestor-card">
-        <form onSubmit={handleSearch}>
-          <div className="gestor-label-group">
-            <div className="gestor-radio-group" style={{ display: 'none' }}>
-              <label className="gestor-radio-label">
-                <input
-                  type="radio"
-                  name="origen"
-                  value={origenSeleccionado}
-                  checked
-                  readOnly
-                  className="gestor-radio-input"
-                />
-                {origenSeleccionado === 'SC'
-                  ? 'Sector Central'
-                  : 'Guardia Nacional'}
-              </label>
-            </div>
-          </div>
-
-          <div className="gestor-input-wrapper">
-            <div>
-              <label className="gestor-input-label">
-                NÚMERO DE EMPLEADO
-              </label>
-              <input
-                type="text"
-                value={numEmpleadoInput}
-                onChange={(e) => setNumEmpleadoInput(e.target.value)}
-                className="gestor-text-input"
-              />
-            </div>
-
-            <button type="submit" className="btn-primary">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                fill="currentColor"
-                className="bi bi-search"
-                viewBox="0 0 16 16"
-              >
-                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-              </svg>{' '}
-              Búsqueda por empleado
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div className="gestor-table-card">
-        <div className="gestor-table-wrapper">
-          <table className="gestor-table">
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'center', width: '90px' }}>
-                  Seleccionar
-                </th>
-                <th>Núm. Emp</th>
-                <th>Nombre(s)</th>
-                <th>Unidad</th>
-                <th>RFC</th>
-                <th>CURP</th>
-                <th>NSS</th>
-                <th>Nivel</th>
-                <th>Pensión Alimenticia</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {empleados.map((emp, index) => {
-                const key = `${emp.origen}_${emp.num_empleado}`;
-                const isChecked = !!seleccionadosMap[key];
-                const rowClass =
-                  index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd';
-
-                return (
-                  <tr key={key} className={rowClass}>
-                    <td className="gestor-td-center">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => handleToggleSelect(emp)}
-                        className="gestor-checkbox"
-                      />
-                    </td>
-
-                    <td className="gestor-td gestor-num-emp">
-                      {emp.num_empleado}
-                    </td>
-                    <td className="gestor-td gestor-text-muted">
-                      {emp.nombre} {emp.apellido_paterno}{' '}
-                      {emp.apellido_materno}
-                    </td>
-                    <td className="gestor-td gestor-text-muted">
-                      {emp.unidad}
-                    </td>
-                    <td className="gestor-td gestor-text-muted gestor-mono">
-                      {emp.rfc}
-                    </td>
-                    <td className="gestor-td gestor-text-muted gestor-mono">
-                      {emp.curp}
-                    </td>
-                    <td className="gestor-td gestor-text-muted">
-                      {emp.nss}
-                    </td>
-                    <td className="gestor-td gestor-text-muted">
-                      {emp.nivel}
-                    </td>
-                    <td className="gestor-td gestor-text-muted">N/A</td>
-                  </tr>
-                );
-              })}
-
-              {empleados.length === 0 && (
-                <tr>
-                  <td colSpan={9} className="gestor-empty-row">
-                    No hay registros para mostrar. Ingresa un número de
-                    empleado y presiona el botón de búsqueda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div
-        className="gestor-card"
-        style={{ borderLeft: '4px solid #800020' }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '15px',
-          }}
-        >
-          <div>
-            <h3
-              style={{
-                margin: '0 0 5px 0',
-                color: '#6b0f1a',
-                fontSize: '16px',
-              }}
-            >
-              Lote de Empleados Listos para Exportar (
-              {listaSeleccionados.length})
-            </h3>
-            <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-              Lista de empleados seleccionados hasta el momento
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={handleExport}
-              className="btn-success"
-              style={{ marginTop: 0 }}
-            >
-              Exportar Excel ({listaSeleccionados.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={handleTerminarCaptura}
-              className="btn-primary"
-              style={{ marginTop: 0, backgroundColor: '#6b0f1a' }}
-            >
-              Terminar Captura ({listaSeleccionados.length})
-            </button>
-          </div>
+      <div className="main-content-wrapper">
+        <div className="gestor-header">
+          <h2 className="gestor-title">
+            Selección de Personal Autorizado {nombreOrigen}
+          </h2>
         </div>
 
-        {listaSeleccionados.length > 0 && (
-          <div className="gestor-batch-container">
-            {listaSeleccionados.map(([key, emp]) => (
-              <div key={key} className="gestor-batch-chip">
-                <span>
-                  <strong>{emp.num_empleado}</strong> - {emp.nombre} (
-                  {emp.origen})
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSeleccionado(key)}
-                  className="gestor-chip-remove"
-                >
-                  ✕
-                </button>
+        <div className="gestor-card">
+          <form onSubmit={handleSearch}>
+            <div className="gestor-label-group">
+              <div className="gestor-radio-group" style={{ display: 'none' }}>
+                <label className="gestor-radio-label">
+                  <input
+                    type="radio"
+                    name="origen"
+                    value={origenSeleccionado}
+                    checked
+                    readOnly
+                    className="gestor-radio-input"
+                  />
+                  {origenSeleccionado === 'SC'
+                    ? 'Sector Central'
+                    : 'Guardia Nacional'}
+                </label>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
 
-      {listaGuardados.length > 0 && (
+            <div className="gestor-input-wrapper">
+              <div>
+                <label className="gestor-input-label">
+                  NÚMERO DE EMPLEADO
+                </label>
+                <input
+                  type="text"
+                  value={numEmpleadoInput}
+                  onChange={(e) => setNumEmpleadoInput(e.target.value)}
+                  className="gestor-text-input"
+                />
+              </div>
+
+              <button type="submit" className="btn-primary">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                  className="bi bi-search"
+                  viewBox="0 0 16 16"
+                >
+                  <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+                </svg>{' '}
+                Búsqueda por empleado
+              </button>
+            </div>
+          </form>
+        </div>
         <div
           className="gestor-card"
-          style={{
-            borderLeft: '4px solid #28a745',
-            backgroundColor: '#f8f9fa',
-          }}
+          style={{ borderLeft: '4px solid #28a745' }}
+        >
+          <h3
+            style={{
+              marginTop: 0,
+              color: '#155724',
+              fontSize: '16px',
+            }}
+          >
+            Carga masiva de empleados.
+          </h3>
+
+          <form onSubmit={handleSubirArchivo}>
+            <div className="gestor-input-wrapper">
+              <div>
+                <label
+                  className="gestor-input-label"
+                  htmlFor="archivo-empleados"
+                >
+                  ARCHIVO EXCEL O CSV
+                </label>
+                <input
+                  ref={archivoInputRef}
+                  id="archivo-empleados"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(e) =>
+                    setArchivoCarga(e.target.files?.[0] ?? null)
+                  }
+                  className="gestor-text-input"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={subiendoArchivo}
+                style={{ marginTop: '18px' }}
+              >
+                {subiendoArchivo ? 'Procesando archivo...' : 'Cargar y guardar'}
+              </button>
+            </div>
+          </form>
+        </div>
+        <div
+          className="gestor-card"
+          style={{ borderLeft: '4px solid #800020' }}
         >
           <div
             style={{
@@ -796,98 +689,157 @@ return (
               <h3
                 style={{
                   margin: '0 0 5px 0',
-                  color: '#155724',
+                  color: '#6b0f1a',
                   fontSize: '16px',
                 }}
               >
-                ✅ Registros Guardados Exitosamente (
-                {listaGuardados.length})
+                Lote de Empleados Listos para Exportar (
+                {listaSeleccionados.length})
               </h3>
               <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
-                Estos registros ya fueron enviados al sistema, pero puedes
-                descargarlos nuevamente cuando gustes.
+                Lista de empleados seleccionados hasta el momento
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={handleExportGuardados}
-              className="btn-success"
-              style={{ marginTop: 0, backgroundColor: '#28a745' }}
-            >
-              📥 Descargar Archivo Guardado ({listaGuardados.length})
-            </button>
-          </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="gestor-loading">
-          Consultando información en la base de datos institucional...
-        </div>
-      ) : null}
-
-      <div
-        className="gestor-card"
-        style={{ borderLeft: '4px solid #28a745' }}
-      >
-        <h3
-          style={{
-            marginTop: 0,
-            color: '#155724',
-            fontSize: '16px',
-          }}
-        >
-          Carga masiva de empleados.
-        </h3>
-
-        <form onSubmit={handleSubirArchivo}>
-          <div className="gestor-input-wrapper">
-            <div>
-              <label
-                className="gestor-input-label"
-                htmlFor="archivo-empleados"
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleExport}
+                className="btn-success"
+                style={{ marginTop: 0 }}
               >
-                ARCHIVO EXCEL O CSV
-              </label>
-              <input
-                ref={archivoInputRef}
-                id="archivo-empleados"
-                type="file"
-                accept=".xlsx,.xls,.csv"
-                onChange={(e) =>
-                  setArchivoCarga(e.target.files?.[0] ?? null)
-                }
-                className="gestor-text-input"
-              />
+                Exportar Excel ({listaSeleccionados.length})
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTerminarCaptura}
+                className="btn-primary"
+                style={{ marginTop: 0, backgroundColor: '#6b0f1a' }}
+              >
+                Terminar Captura ({listaSeleccionados.length})
+              </button>
             </div>
-
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={subiendoArchivo}
-              style={{ marginTop: '18px' }}
-            >
-              {subiendoArchivo ? 'Procesando archivo...' : 'Cargar y guardar'}
-            </button>
           </div>
-        </form>
-      </div>
 
-      {empleadosCargados.length > 0 && (
-        <div className="gestor-card">
-          <h3>Datos cargados ({empleadosCargados.length})</h3>
+          {listaSeleccionados.length > 0 && (
+            <div className="gestor-batch-container">
+              {listaSeleccionados.map(([key, emp]) => (
+                <div key={key} className="gestor-batch-chip">
+                  <span>
+                    <strong>{emp.num_empleado}</strong> - {emp.nombre} (
+                    {emp.origen})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSeleccionado(key)}
+                    className="gestor-chip-remove"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
+        {listaGuardados.length > 0 && (
           <div
-            className="gestor-table-wrapper"
-            style={{ maxHeight: 400, overflow: 'auto' }}
+            className="gestor-card"
+            style={{
+              borderLeft: '4px solid #28a745',
+              backgroundColor: '#f8f9fa',
+            }}
           >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '15px',
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: '0 0 5px 0',
+                    color: '#155724',
+                    fontSize: '16px',
+                  }}
+                >
+                  ✅ Registros Guardados Exitosamente (
+                  {listaGuardados.length})
+                </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>
+                  Estos registros ya fueron enviados al sistema, pero puedes
+                  descargarlos nuevamente cuando gustes.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleExportGuardados}
+                className="btn-success"
+                style={{ marginTop: 0, backgroundColor: '#28a745' }}
+              >
+                📥 Descargar Archivo Guardado ({listaGuardados.length})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {empleadosCargados.length > 0 && (
+          <div className="gestor-card">
+            <h3>Datos cargados ({empleadosCargados.length})</h3>
+
+            <div
+              className="gestor-table-wrapper"
+              style={{ maxHeight: 400, overflow: 'auto' }}
+            >
+              <table className="gestor-table">
+                <thead>
+                  <tr>
+                    <th>Núm. Emp.</th>
+                    <th>Nombre</th>
+                    <th>UR</th>
+                    <th>RFC</th>
+                    <th>CURP</th>
+                    <th>NSS</th>
+                    <th>Nivel</th>
+                    <th>Pensión Alimenticia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empleadosCargados.map((emp) => (
+                    <tr key={`${emp.num_empleado}`}>
+                      <td>{emp.num_empleado}</td>
+                      <td>{emp.nombre_completo}</td>
+                      <td>{emp.ur}</td>
+                      <td>{emp.rfc}</td>
+                      <td>{emp.curp}</td>
+                      <td>{emp.nss}</td>
+                      <td>{emp.nivel}</td>
+                      <td>{emp.pension || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <div className="gestor-table-card">
+          <div className="gestor-table-wrapper">
             <table className="gestor-table">
               <thead>
                 <tr>
-                  <th>Núm. Emp.</th>
-                  <th>Nombre</th>
-                  <th>UR</th>
+                  <th style={{ textAlign: 'center', width: '90px' }}>
+                    Seleccionar
+                  </th>
+                  <th>Núm. Emp</th>
+                  <th>Nombre(s)</th>
+                  <th>Unidad</th>
                   <th>RFC</th>
                   <th>CURP</th>
                   <th>NSS</th>
@@ -895,25 +847,72 @@ return (
                   <th>Pensión Alimenticia</th>
                 </tr>
               </thead>
+
               <tbody>
-                {empleadosCargados.map((emp) => (
-                  <tr key={`${emp.num_empleado}`}>
-                    <td>{emp.num_empleado}</td>
-                    <td>{emp.nombre_completo}</td>
-                    <td>{emp.ur}</td>
-                    <td>{emp.rfc}</td>
-                    <td>{emp.curp}</td>
-                    <td>{emp.nss}</td>
-                    <td>{emp.nivel}</td>
-                    <td>{emp.pension || 'N/A'}</td>
+                {empleados.map((emp, index) => {
+                  const key = `${emp.origen}_${emp.num_empleado}`;
+                  const isChecked = !!seleccionadosMap[key];
+                  const rowClass =
+                    index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd';
+
+                  return (
+                    <tr key={key} className={rowClass}>
+                      <td className="gestor-td-center">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleSelect(emp)}
+                          className="gestor-checkbox"
+                        />
+                      </td>
+
+                      <td className="gestor-td gestor-num-emp">
+                        {emp.num_empleado}
+                      </td>
+                      <td className="gestor-td gestor-text-muted">
+                        {emp.nombre} {emp.apellido_paterno}{' '}
+                        {emp.apellido_materno}
+                      </td>
+                      <td className="gestor-td gestor-text-muted">
+                        {emp.unidad}
+                      </td>
+                      <td className="gestor-td gestor-text-muted gestor-mono">
+                        {emp.rfc}
+                      </td>
+                      <td className="gestor-td gestor-text-muted gestor-mono">
+                        {emp.curp}
+                      </td>
+                      <td className="gestor-td gestor-text-muted">
+                        {emp.nss}
+                      </td>
+                      <td className="gestor-td gestor-text-muted">
+                        {emp.nivel}
+                      </td>
+                      <td className="gestor-td gestor-text-muted">N/A</td>
+                    </tr>
+                  );
+                })}
+
+                {empleados.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="gestor-empty-row">
+                      No hay registros para mostrar. Ingresa un número de
+                      empleado y presiona el botón de búsqueda.
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
+
+        {loading ? (
+          <div className="gestor-loading">
+            Consultando información en la base de datos institucional...
+          </div>
+        ) : null}
+
+      </div>
     </div>
-  </div>
-);
+  );
 }
