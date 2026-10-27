@@ -27,18 +27,24 @@ interface RegistroVale {
   appempleado?: string;
   APPEMPLEADO?: string;
 
+  idEnlace?: number | string;
+  idenlace?: number | string;
+  IDENLACE?: number | string;
+
   rfc?: string;
   RFC?: string;
-
   curp?: string;
   CURP?: string;
 
   cuentaInicial?: string;
   cuentainicial?: string;
   CUENTAINICIAL?: string;
+
+  pension?: string | number | null;
+  PENSION?: string | number | null;
 }
 
-type CampoFiltro = 'numero' | 'nombre' | 'rfc' | 'curp' | 'cuenta' | 'estatus';
+type CampoFiltro = 'numero' | 'nombre' | 'cuenta' | 'estatus';
 
 export function EstatusValesView() {
   const [registros, setRegistros] = useState<RegistroVale[]>([]);
@@ -50,8 +56,6 @@ export function EstatusValesView() {
   const [filtros, setFiltros] = useState<Record<CampoFiltro, string>>({
     numero: '',
     nombre: '',
-    rfc: '',
-    curp: '',
     cuenta: '',
     estatus: '',
   });
@@ -69,6 +73,21 @@ export function EstatusValesView() {
   const obtenerEstatus = (reg: RegistroVale) =>
     Number(reg.idStatus ?? reg.idstatus ?? reg.IDSTATUS);
 
+  const obtenerNombreEstatus = (estatus: number) => {
+    switch (estatus) {
+      case 1:
+        return 'Pendiente';
+      case 2:
+        return 'Entregada';
+      case 3:
+        return 'Sustituida';
+      case 4:
+        return 'Cancelada';
+      default:
+        return 'Desconocido';
+    }
+  };
+
   const obtenerNumeroEmpleado = (reg: RegistroVale) =>
     reg.numEmpleado ?? reg.numempleado ?? reg.NUMEMPLEADO ?? '';
 
@@ -81,16 +100,20 @@ export function EstatusValesView() {
     }
 
     const nombre = reg.NOMEMPLEADO ?? reg.nomEmpleado ?? reg.nomempleado ?? '';
-    const apellido = reg.APPEMPLEADO ?? reg.appEmpleado ?? reg.appempleado ?? '';
+    const apellido =
+      reg.APPEMPLEADO ?? reg.appEmpleado ?? reg.appempleado ?? '';
 
     return `${nombre} ${apellido}`.trim();
   };
 
-  const obtenerRFC = (reg: RegistroVale) => reg.RFC ?? reg.rfc ?? '';
-  const obtenerCURP = (reg: RegistroVale) => reg.CURP ?? reg.curp ?? '';
+  const obtenerEnlace = (reg: RegistroVale) =>
+    reg.IDENLACE ?? reg.idEnlace ?? reg.idenlace ?? '';
 
   const obtenerCuenta = (reg: RegistroVale) =>
     reg.CUENTAINICIAL ?? reg.cuentaInicial ?? reg.cuentainicial ?? '';
+
+  const obtenerPension = (reg: RegistroVale) =>
+    reg.PENSION ?? reg.pension ?? '';
 
   const fetchRegistros = async () => {
     setLoading(true);
@@ -187,11 +210,9 @@ export function EstatusValesView() {
         );
 
         if (!response.ok) {
-          const error = await response
-            .json()
-            .catch(() => ({
-              message: `No se pudieron generar los formatos del registro ${id}.`,
-            }));
+          const error = await response.json().catch(() => ({
+            message: `No se pudieron generar los formatos del registro ${id}.`,
+          }));
 
           throw new Error(
             error.message || `Error al descargar el registro ${id}.`
@@ -210,7 +231,7 @@ export function EstatusValesView() {
 
         window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 
-        // Pausa breve entre archivos para que el navegador inicie cada descarga.
+        // Pausa breve para que el navegador inicie cada descarga.
         await new Promise((resolve) => window.setTimeout(resolve, 300));
       }
 
@@ -366,7 +387,7 @@ export function EstatusValesView() {
 
   const registrosFiltrados = registros.filter((reg) => {
     const nombre = obtenerNombreCompleto(reg);
-    const estatus = obtenerEstatus(reg) === 2 ? 'entregada' : 'pendiente';
+    const estatus = obtenerNombreEstatus(obtenerEstatus(reg)).toLowerCase();
 
     return (
       String(obtenerNumeroEmpleado(reg))
@@ -375,12 +396,6 @@ export function EstatusValesView() {
       String(nombre)
         .toLowerCase()
         .includes(filtros.nombre.toLowerCase()) &&
-      String(obtenerRFC(reg))
-        .toLowerCase()
-        .includes(filtros.rfc.toLowerCase()) &&
-      String(obtenerCURP(reg))
-        .toLowerCase()
-        .includes(filtros.curp.toLowerCase()) &&
       String(obtenerCuenta(reg) || 'sin asignación')
         .toLowerCase()
         .includes(filtros.cuenta.toLowerCase()) &&
@@ -418,11 +433,10 @@ export function EstatusValesView() {
         }}
       >
         <div>
-          <h2 className="gestor-title">
-            Control y Entrega de Vales de Despensa
-          </h2>
+          <h2 className="gestor-title">Control y Entrega de Tarjetas</h2>
           <p className="gestor-subtitle">
-            Gestión de estatus (Pendiente / Entregada) para el personal registrado.
+            Gestión de estatus (Pendiente / Entregada / Sustituida / Cancelada)
+            para el personal registrado.
           </p>
         </div>
 
@@ -448,7 +462,7 @@ export function EstatusValesView() {
                 margin: 0,
               }}
             >
-              📁 Seleccionar Archivo
+              📁 Cargar Tarjetas (.csv)
             </label>
 
             <input
@@ -503,6 +517,8 @@ export function EstatusValesView() {
             <option value="todos">Todos los registros</option>
             <option value="1">Pendientes</option>
             <option value="2">Entregadas</option>
+            <option value="3">Sustituidas</option>
+            <option value="4">Canceladas</option>
           </select>
         </div>
 
@@ -547,13 +563,12 @@ export function EstatusValesView() {
                   <th style={{ textAlign: 'center' }}>Seleccionar</th>
                   <th>Núm. Emp</th>
                   <th>Nombre Completo</th>
-                  <th>RFC</th>
-                  <th>CURP</th>
+                  <th>Enlace</th>
                   <th>Cuenta Asignada</th>
+                  <th>Pensiones</th>
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
-                  <th style={{ textAlign: 'center' }}>
-                    Acciones / Asignar Estatus
-                  </th>
+                  <th style={{ textAlign: 'center' }}>Descargar formatos</th>
+                  <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
                 </tr>
 
                 <tr>
@@ -580,26 +595,7 @@ export function EstatusValesView() {
                       }
                     />
                   </th>
-                  <th>
-                    <input
-                      style={inputFiltroStyle}
-                      aria-label="Filtrar por RFC"
-                      placeholder="Buscar..."
-                      value={filtros.rfc}
-                      onChange={(e) => actualizarFiltro('rfc', e.target.value)}
-                    />
-                  </th>
-                  <th>
-                    <input
-                      style={inputFiltroStyle}
-                      aria-label="Filtrar por CURP"
-                      placeholder="Buscar..."
-                      value={filtros.curp}
-                      onChange={(e) =>
-                        actualizarFiltro('curp', e.target.value)
-                      }
-                    />
-                  </th>
+                  <th></th>
                   <th>
                     <input
                       style={inputFiltroStyle}
@@ -611,6 +607,7 @@ export function EstatusValesView() {
                       }
                     />
                   </th>
+                  <th></th>
                   <th>
                     <select
                       style={inputFiltroStyle}
@@ -623,8 +620,11 @@ export function EstatusValesView() {
                       <option value="">Todos</option>
                       <option value="pendiente">Pendiente</option>
                       <option value="entregada">Entregada</option>
+                      <option value="sustituida">Sustituida</option>
+                      <option value="cancelada">Cancelada</option>
                     </select>
                   </th>
+                  <th></th>
                   <th></th>
                 </tr>
               </thead>
@@ -632,12 +632,22 @@ export function EstatusValesView() {
               <tbody>
                 {registrosPagina.map((reg, index) => {
                   const idRegister = obtenerId(reg);
-                  const esEntregada = obtenerEstatus(reg) === 2;
+                  const estatusActual = obtenerEstatus(reg);
+                  const nombreEstatus = obtenerNombreEstatus(estatusActual);
                   const nombreCompleto = obtenerNombreCompleto(reg) || '-';
                   const numEmp = obtenerNumeroEmpleado(reg) || '-';
-                  const rfc = obtenerRFC(reg) || '-';
-                  const curp = obtenerCURP(reg) || '-';
+                  const enlace = obtenerEnlace(reg);
                   const cuenta = obtenerCuenta(reg);
+                  const pension = obtenerPension(reg);
+
+                  const colorEstatus =
+                    estatusActual === 2
+                      ? { backgroundColor: '#d4edda', color: '#155724' }
+                      : estatusActual === 3
+                        ? { backgroundColor: '#dbeafe', color: '#1e40af' }
+                        : estatusActual === 4
+                          ? { backgroundColor: '#f8d7da', color: '#721c24' }
+                          : { backgroundColor: '#fff3cd', color: '#856404' };
 
                   return (
                     <tr
@@ -660,9 +670,9 @@ export function EstatusValesView() {
 
                       <td className="gestor-td gestor-num-emp">{numEmp}</td>
                       <td className="gestor-td">{nombreCompleto}</td>
-                      <td className="gestor-td gestor-mono">{rfc}</td>
-                      <td className="gestor-td gestor-mono">{curp}</td>
-                      <td className="gestor-td gestor-mono">{cuenta}</td>
+                      <td className="gestor-td">{enlace || '-'}</td>
+                      <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
+                      <td className="gestor-td">{pension || 'N/A'}</td>
 
                       <td className="gestor-td-center">
                         <span
@@ -671,84 +681,66 @@ export function EstatusValesView() {
                             borderRadius: '12px',
                             fontSize: '12px',
                             fontWeight: 'bold',
-                            backgroundColor: esEntregada ? '#d4edda' : '#fff3cd',
-                            color: esEntregada ? '#155724' : '#856404',
+                            ...colorEstatus,
                           }}
                         >
-                          {esEntregada ? 'Entregada' : 'Pendiente'}
+                          {nombreEstatus}
                         </span>
                       </td>
 
-                      <td
-                        className="gestor-td-center"
-                        style={{ textAlign: 'center' }}
-                      >
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: '8px',
-                            justifyContent: 'center',
-                            flexWrap: 'wrap',
+                      <td className="gestor-td-center">
+                        {cuenta ? (
+                          <button
+                            type="button"
+                            onClick={() => abrirFormato(idRegister)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '11px',
+                              backgroundColor: '#0284c7',
+                              color: '#fff',
+                              border: '1px solid #0284c7',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            📄 Descargar
+                          </button>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+
+                      <td className="gestor-td-center">
+                        <select
+                          aria-label={`Cambiar estatus de ${nombreCompleto}`}
+                          value={
+                            Number.isNaN(estatusActual)
+                              ? ''
+                              : String(estatusActual)
+                          }
+                          onChange={(e) => {
+                            if (
+                              idRegister !== undefined &&
+                              idRegister !== null
+                            ) {
+                              void handleCambiarEstatus(
+                                idRegister,
+                                Number(e.target.value)
+                              );
+                            }
                           }}
+                          disabled={
+                            idRegister === undefined || idRegister === null
+                          }
                         >
-{cuenta && (
-  <button
-    type="button"
-    onClick={() => abrirFormato(idRegister)}
-    style={{
-      padding: '5px 10px',
-      fontSize: '11px',
-      backgroundColor: '#0284c7',
-      color: '#fff',
-      border: '1px solid #0284c7',
-      borderRadius: '4px',
-      cursor: 'pointer',
-    }}
-  >
-    📄 Descarga de formatos
-  </button>
-)}
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (idRegister !== undefined) {
-                                handleCambiarEstatus(idRegister, 1);
-                              }
-                            }}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: '11px',
-                              backgroundColor: !esEntregada ? '#6c757d' : '#f8f9fa',
-                              color: !esEntregada ? '#fff' : '#333',
-                              border: '1px solid #ccc',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Marcar Pendiente
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (idRegister !== undefined) {
-                                handleCambiarEstatus(idRegister, 2);
-                              }
-                            }}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: '11px',
-                              backgroundColor: esEntregada ? '#28a745' : '#e2e6ea',
-                              color: esEntregada ? '#fff' : '#333',
-                              border: '1px solid #28a745',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            Marcar Entregada
-                          </button>
-                        </div>
+                          <option value="" disabled>
+                            Selecciona estatus
+                          </option>
+                          <option value="1">Pendiente</option>
+                          <option value="2">Entregada</option>
+                          <option value="3">Sustituida</option>
+                          <option value="4">Cancelada</option>
+                        </select>
                       </td>
                     </tr>
                   );
@@ -756,7 +748,7 @@ export function EstatusValesView() {
 
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="gestor-empty-row">
+                    <td colSpan={9} className="gestor-empty-row">
                       No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>

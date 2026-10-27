@@ -3,7 +3,6 @@ import styles from './Dashboard.module.css';
 import { API_ENDPOINTS } from '../../config/api';
 import { GestorView } from '../gestor/gestorView';
 import { EstatusValesView } from '../admin/EstatusValesView';
-import { CardsView } from '../tarjetas/CardsView';
 import { UsersView } from '../admin/UsersView';
 import { ReportsView } from '../admin/ReportsView';
 
@@ -163,16 +162,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </button>
             )}
 
-            {user.idType === 1 && (
-              <button
-                className={`${styles.navItem} ${activeTab === 'gestion-tarjetas' ? styles.active : ''
-                  }`}
-                onClick={() => setActiveTab('gestion-tarjetas')}
-              >
-                Gestión de tarjetas
-              </button>
-            )}
-
             <button
               className={`${styles.navItem} ${activeTab === 'reportes' ? styles.active : ''
                 }`}
@@ -221,16 +210,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
           {activeTab === 'control-vales' && user.idType === 1 && (
             <EstatusValesView />
-          )}
-
-          {activeTab === 'gestion-tarjetas' && user.idType === 1 && (
-            <div className={styles.card}>
-              <h2>Gestión de tarjetas</h2>
-              <p className={styles.secondaryText}>
-                Apartado exclusivo para la administración de tarjetas.
-              </p>
-              <CardsView />
-            </div>
           )}
 
           {activeTab === 'reportes' && (
