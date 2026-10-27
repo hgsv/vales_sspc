@@ -150,7 +150,7 @@ export function TarjetasView({
     }, [cargarDatos]);
 
     const cuentaInicial = texto(
-        leer(empleado ?? undefined, 'CUENTAINICIAL', 'cuentaInicial'),
+        leer(empleado ?? undefined, 'CUENTAINICIAL', 'cuentainicial'),
         ''
     );
 
