@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { API_ENDPOINTS, apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
+import { TarjetasView } from './TarjetasView';
+
 
 interface RegistroVale {
   idRegister?: number | string;
@@ -52,7 +54,8 @@ export function EstatusValesView() {
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
   const [fileName, setFileName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
+const [registroTarjetas, setRegistroTarjetas] =
+  useState<RegistroVale | null>(null);
   const [filtros, setFiltros] = useState<Record<CampoFiltro, string>>({
     numero: '',
     nombre: '',
@@ -419,7 +422,24 @@ export function EstatusValesView() {
     borderRadius: '4px',
     fontSize: '12px',
   };
+if (registroTarjetas) {
+  const idRegistroSeleccionado = obtenerId(registroTarjetas);
 
+  if (idRegistroSeleccionado === undefined || idRegistroSeleccionado === null) {
+    return (
+      <div className="gestor-card">
+        El registro seleccionado no tiene un ID válido.
+      </div>
+    );
+  }
+
+  return (
+    <TarjetasView
+      idRegister={idRegistroSeleccionado}
+      onVolver={() => setRegistroTarjetas(null)}
+    />
+  );
+}
   return (
     <div className="gestor-container">
       <div
@@ -559,201 +579,192 @@ export function EstatusValesView() {
           <div className="gestor-table-wrapper">
             <table className="gestor-table">
               <thead>
-                <tr>
-                  <th style={{ textAlign: 'center' }}>Seleccionar</th>
-                  <th>Núm. Emp</th>
-                  <th>Nombre Completo</th>
-                  <th>Enlace</th>
-                  <th>Cuenta Asignada</th>
-                  <th>Pensiones</th>
-                  <th style={{ textAlign: 'center' }}>Estatus Actual</th>
-                  <th style={{ textAlign: 'center' }}>Descargar formatos</th>
-                  <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
-                </tr>
+  <tr>
+    <th style={{ textAlign: 'center' }}>Seleccionar</th>
+    <th>Núm. Emp</th>
+    <th>Nombre Completo</th>
+    <th>Enlace</th>
+    <th>Cuenta Asignada</th>
+    <th>Pensiones</th>
+    <th style={{ textAlign: 'center' }}>Estatus Actual</th>
+    <th style={{ textAlign: 'center' }}>Descargar formatos</th>
+    <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
+    <th style={{ textAlign: 'center' }}>Tarjetas</th>
+  </tr>
 
-                <tr>
-                  <th></th>
-                  <th>
-                    <input
-                      style={inputFiltroStyle}
-                      aria-label="Filtrar por número de empleado"
-                      placeholder="Buscar..."
-                      value={filtros.numero}
-                      onChange={(e) =>
-                        actualizarFiltro('numero', e.target.value)
-                      }
-                    />
-                  </th>
-                  <th>
-                    <input
-                      style={inputFiltroStyle}
-                      aria-label="Filtrar por nombre"
-                      placeholder="Buscar..."
-                      value={filtros.nombre}
-                      onChange={(e) =>
-                        actualizarFiltro('nombre', e.target.value)
-                      }
-                    />
-                  </th>
-                  <th></th>
-                  <th>
-                    <input
-                      style={inputFiltroStyle}
-                      aria-label="Filtrar por cuenta asignada"
-                      placeholder="Buscar..."
-                      value={filtros.cuenta}
-                      onChange={(e) =>
-                        actualizarFiltro('cuenta', e.target.value)
-                      }
-                    />
-                  </th>
-                  <th></th>
-                  <th>
-                    <select
-                      style={inputFiltroStyle}
-                      aria-label="Filtrar por estatus actual"
-                      value={filtros.estatus}
-                      onChange={(e) =>
-                        actualizarFiltro('estatus', e.target.value)
-                      }
-                    >
-                      <option value="">Todos</option>
-                      <option value="pendiente">Pendiente</option>
-                      <option value="entregada">Entregada</option>
-                      <option value="sustituida">Sustituida</option>
-                      <option value="cancelada">Cancelada</option>
-                    </select>
-                  </th>
-                  <th></th>
-                  <th></th>
-                </tr>
-              </thead>
+  <tr>
+    <th></th>
+    <th>
+      <input
+        style={inputFiltroStyle}
+        aria-label="Filtrar por número de empleado"
+        placeholder="Buscar..."
+        value={filtros.numero}
+        onChange={(e) => actualizarFiltro('numero', e.target.value)}
+      />
+    </th>
+    <th>
+      <input
+        style={inputFiltroStyle}
+        aria-label="Filtrar por nombre"
+        placeholder="Buscar..."
+        value={filtros.nombre}
+        onChange={(e) => actualizarFiltro('nombre', e.target.value)}
+      />
+    </th>
+    <th></th>
+    <th>
+      <input
+        style={inputFiltroStyle}
+        aria-label="Filtrar por cuenta asignada"
+        placeholder="Buscar..."
+        value={filtros.cuenta}
+        onChange={(e) => actualizarFiltro('cuenta', e.target.value)}
+      />
+    </th>
+    <th></th>
+    <th>
+      <select
+        style={inputFiltroStyle}
+        aria-label="Filtrar por estatus actual"
+        value={filtros.estatus}
+        onChange={(e) => actualizarFiltro('estatus', e.target.value)}
+      >
+        <option value="">Todos</option>
+        <option value="pendiente">Pendiente</option>
+        <option value="entregada">Entregada</option>
+        <option value="sustituida">Sustituida</option>
+        <option value="cancelada">Cancelada</option>
+      </select>
+    </th>
+    <th></th>
+    <th></th>
+    <th></th>
+  </tr>
+</thead>
 
               <tbody>
-                {registrosPagina.map((reg, index) => {
-                  const idRegister = obtenerId(reg);
-                  const estatusActual = obtenerEstatus(reg);
-                  const nombreEstatus = obtenerNombreEstatus(estatusActual);
-                  const nombreCompleto = obtenerNombreCompleto(reg) || '-';
-                  const numEmp = obtenerNumeroEmpleado(reg) || '-';
-                  const enlace = obtenerEnlace(reg);
-                  const cuenta = obtenerCuenta(reg);
-                  const pension = obtenerPension(reg);
+  {registrosPagina.map((reg, index) => {
+    const idRegister = obtenerId(reg);
+    const estatusActual = obtenerEstatus(reg);
+    const nombreEstatus = obtenerNombreEstatus(estatusActual);
+    const nombreCompleto = obtenerNombreCompleto(reg) || '-';
+    const numEmp = obtenerNumeroEmpleado(reg) || '-';
+    const enlace = obtenerEnlace(reg);
+    const cuenta = obtenerCuenta(reg);
+    const pension = obtenerPension(reg);
 
-                  const colorEstatus =
-                    estatusActual === 2
-                      ? { backgroundColor: '#d4edda', color: '#155724' }
-                      : estatusActual === 3
-                        ? { backgroundColor: '#dbeafe', color: '#1e40af' }
-                        : estatusActual === 4
-                          ? { backgroundColor: '#f8d7da', color: '#721c24' }
-                          : { backgroundColor: '#fff3cd', color: '#856404' };
+    const colorEstatus =
+      estatusActual === 2
+        ? { backgroundColor: '#d4edda', color: '#155724' }
+        : estatusActual === 3
+          ? { backgroundColor: '#dbeafe', color: '#1e40af' }
+          : estatusActual === 4
+            ? { backgroundColor: '#f8d7da', color: '#721c24' }
+            : { backgroundColor: '#fff3cd', color: '#856404' };
 
-                  return (
-                    <tr
-                      key={idRegister ?? `${numEmp}-${inicio + index}`}
-                      className={
-                        index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'
-                      }
-                    >
-                      <td className="gestor-td-center">
-                        <input
-                          type="checkbox"
-                          aria-label={`Seleccionar formatos de ${nombreCompleto}`}
-                          checked={
-                            idRegister !== undefined &&
-                            seleccionadosIds.has(String(idRegister))
-                          }
-                          onChange={() => cambiarSeleccion(idRegister)}
-                        />
-                      </td>
+    return (
+      <tr
+        key={idRegister ?? `${numEmp}-${inicio + index}`}
+        className={index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'}
+      >
+        <td className="gestor-td-center">
+          <input
+            type="checkbox"
+            aria-label={`Seleccionar formatos de ${nombreCompleto}`}
+            checked={
+              idRegister !== undefined &&
+              seleccionadosIds.has(String(idRegister))
+            }
+            onChange={() => cambiarSeleccion(idRegister)}
+          />
+        </td>
 
-                      <td className="gestor-td gestor-num-emp">{numEmp}</td>
-                      <td className="gestor-td">{nombreCompleto}</td>
-                      <td className="gestor-td">{enlace || '-'}</td>
-                      <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
-                      <td className="gestor-td">{pension || 'N/A'}</td>
+        <td className="gestor-td gestor-num-emp">{numEmp}</td>
+        <td className="gestor-td">{nombreCompleto}</td>
+        <td className="gestor-td">{enlace || '-'}</td>
+        <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
+        <td className="gestor-td">{pension || 'N/A'}</td>
 
-                      <td className="gestor-td-center">
-                        <span
-                          style={{
-                            padding: '4px 10px',
-                            borderRadius: '12px',
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            ...colorEstatus,
-                          }}
-                        >
-                          {nombreEstatus}
-                        </span>
-                      </td>
+        <td className="gestor-td-center">
+          <span
+            style={{
+              padding: '4px 10px',
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              ...colorEstatus,
+            }}
+          >
+            {nombreEstatus}
+          </span>
+        </td>
 
-                      <td className="gestor-td-center">
-                        {cuenta ? (
-                          <button
-                            type="button"
-                            onClick={() => abrirFormato(idRegister)}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: '11px',
-                              backgroundColor: '#0284c7',
-                              color: '#fff',
-                              border: '1px solid #0284c7',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            📄 Descargar
-                          </button>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
+        <td className="gestor-td-center">
+          {cuenta ? (
+            <button
+              type="button"
+              onClick={() => abrirFormato(idRegister)}
+              style={{
+                padding: '5px 10px',
+                fontSize: '11px',
+                backgroundColor: '#0284c7',
+                color: '#fff',
+                border: '1px solid #0284c7',
+                borderRadius: '4px',
+                cursor: 'pointer',
+              }}
+            >
+              📄 Descargar
+            </button>
+          ) : (
+            '-'
+          )}
+        </td>
 
-                      <td className="gestor-td-center">
-                        <select
-                          aria-label={`Cambiar estatus de ${nombreCompleto}`}
-                          value={
-                            Number.isNaN(estatusActual)
-                              ? ''
-                              : String(estatusActual)
-                          }
-                          onChange={(e) => {
-                            if (
-                              idRegister !== undefined &&
-                              idRegister !== null
-                            ) {
-                              void handleCambiarEstatus(
-                                idRegister,
-                                Number(e.target.value)
-                              );
-                            }
-                          }}
-                          disabled={
-                            idRegister === undefined || idRegister === null
-                          }
-                        >
-                          <option value="" disabled>
-                            Selecciona estatus
-                          </option>
-                          <option value="1">Pendiente</option>
-                          <option value="2">Entregada</option>
-                          <option value="3">Sustituida</option>
-                          <option value="4">Cancelada</option>
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                })}
+        <td className="gestor-td-center">
+          <select
+            aria-label={`Cambiar estatus de ${nombreCompleto}`}
+            value={Number.isNaN(estatusActual) ? '' : String(estatusActual)}
+            onChange={(e) => {
+              if (idRegister !== undefined && idRegister !== null) {
+                void handleCambiarEstatus(idRegister, Number(e.target.value));
+              }
+            }}
+            disabled={idRegister === undefined || idRegister === null}
+          >
+            <option value="" disabled>
+              Selecciona estatus
+            </option>
+            <option value="1">Pendiente</option>
+            <option value="2">Entregada</option>
+            <option value="3">Sustituida</option>
+            <option value="4">Cancelada</option>
+          </select>
+        </td>
 
-                {registrosFiltrados.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="gestor-empty-row">
-                      No se encontraron registros con los filtros seleccionados.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+        <td className="gestor-td-center">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => setRegistroTarjetas(reg)}
+            disabled={idRegister === undefined || idRegister === null}
+          >
+            💳 Manejar tarjetas
+          </button>
+        </td>
+      </tr>
+    );
+  })}
+
+  {registrosFiltrados.length === 0 && (
+    <tr>
+      <td colSpan={10} className="gestor-empty-row">
+        No se encontraron registros con los filtros seleccionados.
+      </td>
+    </tr>
+  )}
+</tbody>
             </table>
           </div>
 
