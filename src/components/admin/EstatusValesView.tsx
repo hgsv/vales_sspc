@@ -454,10 +454,6 @@ if (registroTarjetas) {
       >
         <div>
           <h2 className="gestor-title">Control y Entrega de Tarjetas</h2>
-          <p className="gestor-subtitle">
-            Gestión de estatus (Pendiente / Entregada / Sustituida / Cancelada)
-            para el personal registrado.
-          </p>
         </div>
 
         <div
