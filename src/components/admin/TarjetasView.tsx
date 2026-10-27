@@ -385,11 +385,6 @@ export function TarjetasView({
 
                     <div className="gestor-card">
                         <h3>Registrar tarjeta de reemplazo</h3>
-                        <p>
-                            Captura los datos de la nueva tarjeta, por ejemplo, cuando la
-                            anterior se extravíe.
-                        </p>
-
                         <form onSubmit={registrarReemplazo}>
                             <div
                                 className="gestor-input-wrapper"
