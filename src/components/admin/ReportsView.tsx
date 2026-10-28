@@ -19,6 +19,13 @@ interface RespuestaReporte {
   data?: FilaReporte[];
 }
 
+interface FiltrosReporte {
+  enlace: string;
+  estatus: string;
+  origen: string;
+  ur: string;
+}
+
 const obtenerValor = (fila: FilaReporte, key: string) =>
   fila[key] ?? fila[key.toLowerCase()] ?? fila[key.toUpperCase()] ?? '';
 
@@ -34,12 +41,34 @@ export function ReportsView() {
 
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
+  const [filtros, setFiltros] = useState<FiltrosReporte>({
+    enlace: '',
+    estatus: '',
+    origen: '',
+    ur: '',
+  });
 
   const token = () => localStorage.getItem('auth_token');
 
-  const totalPaginas = Math.max(1, Math.ceil(registros.length / porPagina));
+  const opcionesFiltro = (key: string) =>
+    Array.from(
+      new Set(
+        registros
+          .map((registro) => String(obtenerValor(registro, key)).trim())
+          .filter(Boolean)
+      )
+    ).sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+
+  const registrosFiltrados = registros.filter((registro) =>
+    (!filtros.enlace || String(obtenerValor(registro, 'IDENLACE')).trim() === filtros.enlace) &&
+    (!filtros.estatus || String(obtenerValor(registro, 'IDSTATUS')).trim() === filtros.estatus) &&
+    (!filtros.origen || String(obtenerValor(registro, 'ORIGEN')).trim().toUpperCase() === filtros.origen) &&
+    (!filtros.ur || String(obtenerValor(registro, 'UR')).trim() === filtros.ur)
+  );
+
+  const totalPaginas = Math.max(1, Math.ceil(registrosFiltrados.length / porPagina));
   const inicio = (pagina - 1) * porPagina;
-  const registrosPagina = registros.slice(inicio, inicio + porPagina);
+  const registrosPagina = registrosFiltrados.slice(inicio, inicio + porPagina);
 
   useEffect(() => {
     const cargarAnios = async () => {
@@ -106,6 +135,7 @@ export function ReportsView() {
       setOrigen(data.origen ?? '');
       setColumnas(data.columnas ?? []);
       setRegistros(data.data ?? []);
+      setFiltros({ enlace: '', estatus: '', origen: '', ur: '' });
       setPagina(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el reporte.');
@@ -122,11 +152,11 @@ export function ReportsView() {
   }, [cargarReporte]);
 
   const exportarExcel = () => {
-    if (registros.length === 0 || columnas.length === 0) return;
+    if (registrosFiltrados.length === 0 || columnas.length === 0) return;
 
     const filasExcel = [
       columnas.map((columna) => columna.label),
-      ...registros.map((registro) =>
+      ...registrosFiltrados.map((registro) =>
         columnas.map((columna) => obtenerValor(registro, columna.key))
       ),
     ];
@@ -172,6 +202,7 @@ export function ReportsView() {
               value={anioSeleccionado}
               onChange={(event) => {
                 setAnioSeleccionado(event.target.value);
+                setFiltros({ enlace: '', estatus: '', origen: '', ur: '' });
                 setPagina(1);
               }}
               disabled={cargandoAnios || anios.length === 0}
@@ -186,14 +217,98 @@ export function ReportsView() {
             </select>
           </div>
 
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))',
+              gap: 12,
+              flex: '1 1 700px',
+              minWidth: 0,
+            }}
+          >
+            <div>
+              <label className="gestor-input-label" htmlFor="reporte-enlace">ENLACE</label>
+              <select
+                id="reporte-enlace"
+                className="gestor-text-input"
+                value={filtros.enlace}
+                onChange={(event) => {
+                  setFiltros((actual) => ({ ...actual, enlace: event.target.value }));
+                  setPagina(1);
+                }}
+                disabled={cargandoReporte}
+              >
+                <option value="">Todos</option>
+                {opcionesFiltro('IDENLACE').map((valor) => <option key={valor} value={valor}>{valor}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="gestor-input-label" htmlFor="reporte-estatus">ESTATUS</label>
+              <select
+                id="reporte-estatus"
+                className="gestor-text-input"
+                value={filtros.estatus}
+                onChange={(event) => {
+                  setFiltros((actual) => ({ ...actual, estatus: event.target.value }));
+                  setPagina(1);
+                }}
+                disabled={cargandoReporte}
+              >
+                <option value="">Todos</option>
+                {opcionesFiltro('IDSTATUS').map((valor) => {
+                  const nombresEstatus: Record<string, string> = {
+                    '1': 'Pendiente', '2': 'Entregada', '3': 'Sustituida', '4': 'Cancelada',
+                  };
+                  return <option key={valor} value={valor}>{nombresEstatus[valor] ?? valor}</option>;
+                })}
+              </select>
+            </div>
+            <div>
+              <label className="gestor-input-label" htmlFor="reporte-origen">ORIGEN</label>
+              <select
+                id="reporte-origen"
+                className="gestor-text-input"
+                value={filtros.origen}
+                onChange={(event) => {
+                  setFiltros((actual) => ({ ...actual, origen: event.target.value }));
+                  setPagina(1);
+                }}
+                disabled={cargandoReporte}
+              >
+                <option value="">Todos</option>
+                {opcionesFiltro('ORIGEN').map((valor) => (
+                  <option key={valor} value={valor.toUpperCase()}>
+                    {valor.toUpperCase() === 'SC' ? 'Sector Central (SSPC)' : valor.toUpperCase() === 'GN' ? 'Guardia Nacional' : valor}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="gestor-input-label" htmlFor="reporte-ur">UR</label>
+              <select
+                id="reporte-ur"
+                className="gestor-text-input"
+                value={filtros.ur}
+                onChange={(event) => {
+                  setFiltros((actual) => ({ ...actual, ur: event.target.value }));
+                  setPagina(1);
+                }}
+                disabled={cargandoReporte}
+              >
+                <option value="">Todas</option>
+                {opcionesFiltro('UR').map((valor) => <option key={valor} value={valor}>{valor}</option>)}
+              </select>
+            </div>
+          </div>
+
           <button
             type="button"
             className="btn-success"
             onClick={exportarExcel}
-            disabled={cargandoReporte || registros.length === 0}
+            disabled={cargandoReporte || registrosFiltrados.length === 0}
             style={{ marginTop: 0 }}
           >
-            Exportar Excel ({registros.length})
+            Exportar Excel ({registrosFiltrados.length})
           </button>
         </div>
       </div>
@@ -233,10 +348,12 @@ export function ReportsView() {
                   </tr>
                 ))}
 
-                {registros.length === 0 && (
+                {registrosFiltrados.length === 0 && (
                   <tr>
                     <td colSpan={Math.max(columnas.length, 1)} className="gestor-empty-row">
-                      No hay registros de {origenLabel} para el año seleccionado.
+                      {registros.length === 0
+                        ? `No hay registros de ${origenLabel} para el año seleccionado.`
+                        : 'No hay registros que coincidan con los filtros seleccionados.'}
                     </td>
                   </tr>
                 )}
@@ -255,12 +372,12 @@ export function ReportsView() {
             }}
           >
             <span>
-              {registros.length === 0
+              {registrosFiltrados.length === 0
                 ? 'Sin resultados'
                 : `Mostrando ${inicio + 1}–${Math.min(
-                    inicio + porPagina,
-                    registros.length
-                  )} de ${registros.length}`}
+                  inicio + porPagina,
+                  registrosFiltrados.length
+                )} de ${registrosFiltrados.length}`}
             </span>
 
             <label>
@@ -273,7 +390,7 @@ export function ReportsView() {
                 }}
               >
                 <option value={10}>10</option>
-                <option value={25}>25</option>
+                <option value={20}>20</option>
                 <option value={50}>50</option>
               </select>
             </label>
@@ -282,7 +399,7 @@ export function ReportsView() {
               <button
                 type="button"
                 onClick={() => setPagina((actual) => Math.max(1, actual - 1))}
-                disabled={pagina === 1 || registros.length === 0}
+                disabled={pagina === 1 || registrosFiltrados.length === 0}
               >
                 Anterior
               </button>
@@ -296,7 +413,7 @@ export function ReportsView() {
                 onClick={() =>
                   setPagina((actual) => Math.min(totalPaginas, actual + 1))
                 }
-                disabled={pagina >= totalPaginas || registros.length === 0}
+                disabled={pagina >= totalPaginas || registrosFiltrados.length === 0}
               >
                 Siguiente
               </button>

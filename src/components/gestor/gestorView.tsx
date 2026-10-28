@@ -55,6 +55,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
     origenSeleccionado === 'SC' ? 'Sector Central' : 'Guardia Nacional';
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [numEmpleadoInput, setNumEmpleadoInput] = useState('');
+  const [busquedaRealizada, setBusquedaRealizada] = useState(false);
 
   const [seleccionadosMap, setSeleccionadosMap] = useState<{
     [key: string]: Empleado;
@@ -81,6 +82,8 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       return;
     }
 
+    setBusquedaRealizada(true);
+    setEmpleados([]);
     setLoading(true);
     const token = localStorage.getItem('auth_token');
 
@@ -831,9 +834,10 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
           </div>
         )}
 
-        <div className="gestor-table-card">
-          <div className="gestor-table-wrapper">
-            <table className="gestor-table">
+        {busquedaRealizada && !loading && (
+          <div className="gestor-table-card">
+            <div className="gestor-table-wrapper">
+              <table className="gestor-table">
               <thead>
                 <tr>
                   <th style={{ textAlign: 'center', width: '90px' }}>
@@ -898,21 +902,21 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                 {empleados.length === 0 && (
                   <tr>
                     <td colSpan={9} className="gestor-empty-row">
-                      No hay registros para mostrar. Ingresa un número de
-                      empleado y presiona el botón de búsqueda.
+                      No se encontraron registros para el número de empleado consultado.
                     </td>
                   </tr>
                 )}
               </tbody>
-            </table>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
-        {loading ? (
+        {busquedaRealizada && loading && (
           <div className="gestor-loading">
             Consultando información en la base de datos institucional...
           </div>
-        ) : null}
+        )}
 
       </div>
     </div>
