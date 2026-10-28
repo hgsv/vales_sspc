@@ -73,6 +73,7 @@ export function ReportsView() {
           .filter(Boolean)
       )
     ).sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+  const opcionesEnlace = opcionesFiltro('IDENLACE');
 
   const registrosFiltrados = registros.filter((registro) =>
     (!filtros.enlace || String(obtenerValor(registro, 'IDENLACE')).trim() === filtros.enlace) &&
@@ -235,28 +236,30 @@ export function ReportsView() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, minmax(120px, 1fr))',
+              gridTemplateColumns: `repeat(${opcionesEnlace.length > 1 ? 4 : 3}, minmax(120px, 1fr))`,
               gap: 12,
               flex: '1 1 700px',
               minWidth: 0,
             }}
           >
-            <div>
-              <label className="gestor-input-label" htmlFor="reporte-enlace">ENLACE</label>
-              <select
-                id="reporte-enlace"
-                className="gestor-text-input"
-                value={filtros.enlace}
-                onChange={(event) => {
-                  setFiltros((actual) => ({ ...actual, enlace: event.target.value }));
-                  setPagina(1);
-                }}
-                disabled={cargandoReporte}
-              >
-                <option value="">Todos</option>
-                {opcionesFiltro('IDENLACE').map((valor) => <option key={valor} value={valor}>{valor}</option>)}
-              </select>
-            </div>
+            {opcionesEnlace.length > 1 && (
+              <div>
+                <label className="gestor-input-label" htmlFor="reporte-enlace">ENLACE</label>
+                <select
+                  id="reporte-enlace"
+                  className="gestor-text-input"
+                  value={filtros.enlace}
+                  onChange={(event) => {
+                    setFiltros((actual) => ({ ...actual, enlace: event.target.value }));
+                    setPagina(1);
+                  }}
+                  disabled={cargandoReporte}
+                >
+                  <option value="">Todos</option>
+                  {opcionesEnlace.map((valor) => <option key={valor} value={valor}>{valor}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="gestor-input-label" htmlFor="reporte-estatus">ESTATUS</label>
               <select
