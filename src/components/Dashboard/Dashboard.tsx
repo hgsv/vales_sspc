@@ -209,7 +209,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           )}
 
           {activeTab === 'control-vales' && user.idType != 2 && (
-            <EstatusValesView />
+            <EstatusValesView idType={user.idType} />
           )}
 
           {activeTab === 'reportes' && (

@@ -42,6 +42,22 @@ const texto = (valor: unknown, alternativo = '—'): string => {
   return String(valor);
 };
 
+const moneda = (valor: unknown): string => {
+  if (valor === undefined || valor === null || valor === '') return 'N/A';
+
+  const numero = typeof valor === 'number'
+    ? valor
+    : Number(String(valor).replace(/[,$\s]/g, ''));
+
+  if (!Number.isFinite(numero)) return String(valor);
+
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+  }).format(numero);
+};
+
 const fecha = (valor: unknown): string => {
   if (!valor) return '—';
 
@@ -328,6 +344,7 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
               <div><strong>Origen:</strong> {texto(leer(empleado, 'ORIGEN', 'origen'))}</div>
               <div><strong>Estatus del registro:</strong> {texto(leer(empleado, 'IDSTATUS', 'idstatus'))}</div>
               <div><strong>Pensiones:</strong> {texto(leer(empleado, 'PENSION', 'pension'), 'N/A')}</div>
+              <div><strong>Importe asignado:</strong> {moneda(leer(empleado, 'IMPORTE', 'importe'))}</div>
             </div>
           </div>
 
@@ -345,7 +362,7 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
               >
                 <div>
                   <label className="gestor-input-label" htmlFor="folioCard">
-                    FOLIO DE TARJETA
+                    CUENTA VIGENTE
                   </label>
                   <input
                     id="folioCard"

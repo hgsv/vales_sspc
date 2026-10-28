@@ -56,6 +56,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [numEmpleadoInput, setNumEmpleadoInput] = useState('');
   const [busquedaRealizada, setBusquedaRealizada] = useState(false);
+  const [importeAsignar, setImporteAsignar] = useState('15000');
 
   const [seleccionadosMap, setSeleccionadosMap] = useState<{
     [key: string]: Empleado;
@@ -68,6 +69,20 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const [archivoCarga, setArchivoCarga] = useState<File | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const archivoInputRef = useRef<HTMLInputElement>(null);
+
+  const validarImporteAsignar = (): number | null => {
+    const importe = Number(importeAsignar);
+    if (!importeAsignar.trim() || !Number.isFinite(importe) || importe <= 0) {
+      void Swal.fire({
+        icon: 'warning',
+        title: 'Importe no válido',
+        text: 'Ingresa un importe mayor que cero para continuar.',
+        confirmButtonColor: '#800020',
+      });
+      return null;
+    }
+    return importe;
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,6 +271,9 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       return;
     }
 
+    const importe = validarImporteAsignar();
+    if (importe === null) return;
+
     const extension = archivoCarga.name.split('.').pop()?.toLowerCase();
 
     if (!extension || !['xlsx', 'xls', 'csv'].includes(extension)) {
@@ -401,13 +419,17 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
         );
       }
 
+      const importeTexto = importe.toLocaleString('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+      });
       const confirmacion = await Swal.fire({
         icon: 'question',
         title: 'Confirmar carga',
         text: `Se guardarán ${empleadosArchivo.length} registros de ${origenSeleccionado === 'GN'
           ? 'Guardia Nacional'
           : 'Sector Central'
-          }. ¿Deseas continuar?`,
+          }. Importe a asignar: ${importeTexto}. ¿Deseas continuar?`,
         showCancelButton: true,
         confirmButtonText: 'Sí, guardar',
         cancelButtonText: 'Cancelar',
@@ -427,7 +449,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
-          body: JSON.stringify({ empleados: empleadosArchivo }),
+          body: JSON.stringify({ empleados: empleadosArchivo, importe }),
         }
       );
 
@@ -488,9 +510,16 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       return;
     }
 
+    const importe = validarImporteAsignar();
+    if (importe === null) return;
+
+    const importeTexto = importe.toLocaleString('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    });
     const result = await Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Estás seguro de registrar a los ${empleadosSeleccionados.length} empleados seleccionados en el sistema?`,
+      text: `¿Registrar a los ${empleadosSeleccionados.length} empleados seleccionados con importe de ${importeTexto}?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, registrar',
@@ -515,6 +544,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
           },
           body: JSON.stringify({
             empleados: empleadosSeleccionados,
+            importe,
           }),
         }
       );
@@ -629,6 +659,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
             </div>
           </form>
         </div>
+
         <div
           className="gestor-card"
           style={{ borderLeft: '4px solid #28a745' }}
@@ -645,6 +676,23 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
 
           <form onSubmit={handleSubirArchivo}>
             <div className="gestor-input-wrapper">
+              <div style={{ minWidth: 220, maxWidth: 280, flex: '1 1 220px' }}>
+                <label className="gestor-input-label" htmlFor="importe-asignar">
+                  IMPORTE A ASIGNAR (MXN)
+                </label>
+                <input
+                  id="importe-asignar"
+                  type="number"
+                  className="gestor-text-input"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={importeAsignar}
+                  onChange={(event) => setImporteAsignar(event.target.value)}
+                  style={{ marginTop: 6 }}
+                  aria-describedby="importe-asignar-ayuda"
+                />
+              </div>
               <div>
                 <label
                   className="gestor-input-label"

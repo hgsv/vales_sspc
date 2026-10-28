@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import { API_ENDPOINTS, apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
 import { TarjetasView } from './TarjetasView';
@@ -33,6 +34,9 @@ interface RegistroVale {
   idenlace?: number | string;
   IDENLACE?: number | string;
 
+  origen?: string;
+  ORIGEN?: string;
+
   rfc?: string;
   RFC?: string;
   curp?: string;
@@ -48,7 +52,7 @@ interface RegistroVale {
 
 type CampoFiltro = 'numero' | 'nombre' | 'cuenta' | 'estatus';
 
-export function EstatusValesView() {
+export function EstatusValesView({ idType }: { idType?: number | null }) {
   const [registros, setRegistros] = useState<RegistroVale[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
@@ -111,6 +115,13 @@ export function EstatusValesView() {
 
   const obtenerEnlace = (reg: RegistroVale) =>
     reg.IDENLACE ?? reg.idEnlace ?? reg.idenlace ?? '';
+
+  const obtenerOrigen = (reg: RegistroVale) => {
+    const origen = String(reg.ORIGEN ?? reg.origen ?? '').trim().toUpperCase();
+    if (origen === 'SC') return 'SECTOR CENTRAL';
+    if (origen === 'GN') return 'PERSONAL DE CARRERA';
+    return origen || '-';
+  };
 
   const obtenerCuenta = (reg: RegistroVale) =>
     reg.CUENTAINICIAL ?? reg.cuentaInicial ?? reg.cuentainicial ?? '';
@@ -329,7 +340,12 @@ export function EstatusValesView() {
       const data = await response.json();
 
       if (response.ok && data.status) {
-        alert(data.message || 'Tarjetas cargadas y asociadas correctamente.');
+        await Swal.fire({
+          icon: 'success',
+          title: 'Carga exitosa',
+          text: data.message || 'Tarjetas cargadas y asociadas correctamente.',
+          confirmButtonColor: '#800020',
+        });
         setSelectedFile(null);
         setFileName('');
         await fetchRegistros();
@@ -579,6 +595,7 @@ export function EstatusValesView() {
                   <th>Núm. Emp</th>
                   <th>Nombre Completo</th>
                   <th>Enlace</th>
+                  {idType === 1 && <th>Origen del registro</th>}
                   <th>Cuenta Asignada</th>
                   <th>Pensiones</th>
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
@@ -608,6 +625,7 @@ export function EstatusValesView() {
                     />
                   </th>
                   <th></th>
+                  {idType === 1 && <th></th>}
                   <th>
                     <input
                       style={inputFiltroStyle}
@@ -678,6 +696,9 @@ export function EstatusValesView() {
                       <td className="gestor-td gestor-num-emp">{numEmp}</td>
                       <td className="gestor-td">{nombreCompleto}</td>
                       <td className="gestor-td">{enlace || '-'}</td>
+                      {idType === 1 && (
+                        <td className="gestor-td">{obtenerOrigen(reg) || '-'}</td>
+                      )}
                       <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
                       <td className="gestor-td">{pension || 'N/A'}</td>
 
@@ -754,7 +775,7 @@ export function EstatusValesView() {
 
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="gestor-empty-row">
+                    <td colSpan={idType === 1 ? 11 : 10} className="gestor-empty-row">
                       No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>

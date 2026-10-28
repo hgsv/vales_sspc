@@ -41,6 +41,11 @@ const obtenerValorMostrado = (fila: FilaReporte, key: string) => {
   if (key.toUpperCase() === 'IDSTATUS') {
     return nombresEstatus[String(valor).trim()] ?? String(valor || '—');
   }
+  if (key.toUpperCase() === 'ORIGEN') {
+    const origenRegistro = String(valor).trim().toUpperCase();
+    if (origenRegistro === 'SC') return 'Sector Central (SSPC)';
+    if (origenRegistro === 'GN') return 'Guardia Nacional';
+  }
   return valor;
 };
 
@@ -187,7 +192,7 @@ export function ReportsView() {
     XLSX.writeFile(libro, `reporte_${origen || 'registros'}_${anioSeleccionado}.xlsx`);
   };
 
-  const origenLabel = origen === 'SC' ? 'Sector Central (SSPC)' : 'Guardia Nacional';
+  const origenLabel = origen === 'TODOS' ? 'todos los orígenes' : origen === 'SC' ? 'Sector Central (SSPC)' : 'Guardia Nacional';
 
   return (
     <div className="gestor-container">
