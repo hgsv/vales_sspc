@@ -806,6 +806,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                     <th>RFC</th>
                     <th>CURP</th>
                     <th>NSS</th>
+                    <th>Enlace</th>
                     <th>Nivel</th>
                     <th>Pensión Alimenticia</th>
                   </tr>
@@ -819,6 +820,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                       <td>{emp.rfc}</td>
                       <td>{emp.curp}</td>
                       <td>{emp.nss}</td>
+                      <td>{emp.enlace || 'N/A'}</td>
                       <td>{emp.nivel}</td>
                       <td>{emp.pension || 'N/A'}</td>
                     </tr>

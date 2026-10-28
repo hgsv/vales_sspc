@@ -32,7 +32,14 @@ export function ReportsView() {
   const [cargandoReporte, setCargandoReporte] = useState(false);
   const [error, setError] = useState('');
 
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
+
   const token = () => localStorage.getItem('auth_token');
+
+  const totalPaginas = Math.max(1, Math.ceil(registros.length / porPagina));
+  const inicio = (pagina - 1) * porPagina;
+  const registrosPagina = registros.slice(inicio, inicio + porPagina);
 
   useEffect(() => {
     const cargarAnios = async () => {
@@ -61,6 +68,7 @@ export function ReportsView() {
         } else {
           setRegistros([]);
           setColumnas([]);
+          setPagina(1);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al consultar años.');
@@ -98,10 +106,12 @@ export function ReportsView() {
       setOrigen(data.origen ?? '');
       setColumnas(data.columnas ?? []);
       setRegistros(data.data ?? []);
+      setPagina(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el reporte.');
       setColumnas([]);
       setRegistros([]);
+      setPagina(1);
     } finally {
       setCargandoReporte(false);
     }
@@ -160,7 +170,10 @@ export function ReportsView() {
               id="reporte-anio"
               className="gestor-text-input"
               value={anioSeleccionado}
-              onChange={(event) => setAnioSeleccionado(event.target.value)}
+              onChange={(event) => {
+                setAnioSeleccionado(event.target.value);
+                setPagina(1);
+              }}
               disabled={cargandoAnios || anios.length === 0}
               style={{ marginTop: 6 }}
             >
@@ -205,10 +218,12 @@ export function ReportsView() {
                 </tr>
               </thead>
               <tbody>
-                {registros.map((registro, index) => (
+                {registrosPagina.map((registro, index) => (
                   <tr
-                    key={String(obtenerValor(registro, 'IDREGISTER') || index)}
-                    className={index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'}
+                    key={String(obtenerValor(registro, 'IDREGISTER') || inicio + index)}
+                    className={
+                      (inicio + index) % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'
+                    }
                   >
                     {columnas.map((columna) => (
                       <td className="gestor-td" key={columna.key}>
@@ -217,6 +232,7 @@ export function ReportsView() {
                     ))}
                   </tr>
                 ))}
+
                 {registros.length === 0 && (
                   <tr>
                     <td colSpan={Math.max(columnas.length, 1)} className="gestor-empty-row">
@@ -227,8 +243,64 @@ export function ReportsView() {
               </tbody>
             </table>
           </div>
-          <div style={{ padding: 12 }}>
-            {registros.length} registros encontrados para {anioSeleccionado || '—'}.
+
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              padding: 12,
+            }}
+          >
+            <span>
+              {registros.length === 0
+                ? 'Sin resultados'
+                : `Mostrando ${inicio + 1}–${Math.min(
+                    inicio + porPagina,
+                    registros.length
+                  )} de ${registros.length}`}
+            </span>
+
+            <label>
+              Filas por página:{' '}
+              <select
+                value={porPagina}
+                onChange={(event) => {
+                  setPorPagina(Number(event.target.value));
+                  setPagina(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </label>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setPagina((actual) => Math.max(1, actual - 1))}
+                disabled={pagina === 1 || registros.length === 0}
+              >
+                Anterior
+              </button>
+
+              <span>
+                Página {pagina} de {totalPaginas}
+              </span>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setPagina((actual) => Math.min(totalPaginas, actual + 1))
+                }
+                disabled={pagina >= totalPaginas || registros.length === 0}
+              >
+                Siguiente
+              </button>
+            </div>
           </div>
         </div>
       )}

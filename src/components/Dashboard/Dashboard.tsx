@@ -142,7 +142,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </div>
 
           <nav className={styles.navMenu}>
-            {user.idType !== 1 && (
+            {user.idType === 2 && (
               <button
                 className={`${styles.navItem} ${activeTab === 'vales' ? styles.active : ''
                   }`}
@@ -152,7 +152,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </button>
             )}
 
-            {user.idType === 1 && (
+            {user.idType != 2 && (
               <button
                 className={`${styles.navItem} ${activeTab === 'control-vales' ? styles.active : ''
                   }`}
@@ -191,7 +191,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
       <main className={styles.mainContent}>
         <header className={styles.topHeader}>
-          <h1>Hola, {loadingUser ? '...' : user.firstName}</h1>
+          <h1>HOLA, {loadingUser ? '...' : user.firstName}</h1>
 
           <div className={styles.headerBadges}>
             {user.unidad && (
@@ -204,11 +204,11 @@ export function Dashboard({ onLogout }: DashboardProps) {
         </header>
 
         <section className={styles.contentBody}>
-          {activeTab === 'vales' && user.idType !== 1 && (
+          {activeTab === 'vales' && user.idType === 2 && (
             <GestorView origenUsuario={user.origen} />
           )}
 
-          {activeTab === 'control-vales' && user.idType === 1 && (
+          {activeTab === 'control-vales' && user.idType != 2 && (
             <EstatusValesView />
           )}
 

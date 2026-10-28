@@ -279,30 +279,34 @@ export function UsersView() {
 
         try {
             const editando = usuarioEditando !== null;
+
             const url = editando
                 ? apiUrl(`admin/users/${encodeURIComponent(usuarioEditando)}`)
                 : apiUrl('admin/users');
 
-const payload: Record<string, unknown> = {
-    ...(editando ? { id_user: Number(usuarioEditando) } : {}),
-    numEmpleado: formulario.numEmpleado.trim(),
-    origen: formulario.origen,
-    firstName: formulario.firstName.trim(),
-    lastName: formulario.lastName.trim(),
-    middleName: formulario.middleName.trim(),
-    nivel: formulario.nivel.trim(),
-    unidad: formulario.unidad.trim(),
-    email: formulario.email.trim(),
-    idType: Number(formulario.idType),
-    active: formulario.active ? 1 : 0,
-};
+            const payload: Record<string, unknown> = {
+                numEmpleado: formulario.numEmpleado.trim(),
+                origen: formulario.origen,
+                nomUsuario: formulario.firstName.trim(),
+                appUsuario: formulario.lastName.trim(),
+                apmUsuario: formulario.middleName.trim(),
+                cargo: formulario.nivel.trim(),
+                unidad: formulario.unidad.trim(),
+                email: formulario.email.trim(),
+                idtype: Number(formulario.idType),
+            };
 
-if (editando && nuevaPassword.trim()) {
-    payload.nuevaPassword = nuevaPassword;
-}
+            if (!editando) {
+                payload.password = formulario.password;
+            }
 
-            if (editando && nuevaPassword.trim()) {
-                payload.nuevaPassword = nuevaPassword;
+            if (editando) {
+                payload.id_user = Number(usuarioEditando);
+                payload.active = formulario.active ? 1 : 0;
+
+                if (nuevaPassword.trim()) {
+                    payload.nuevaPassword = nuevaPassword.trim();
+                }
             }
             const response = await fetch(url, {
                 method: editando ? 'PUT' : 'POST',
