@@ -29,6 +29,21 @@ interface FiltrosReporte {
 const obtenerValor = (fila: FilaReporte, key: string) =>
   fila[key] ?? fila[key.toLowerCase()] ?? fila[key.toUpperCase()] ?? '';
 
+const nombresEstatus: Record<string, string> = {
+  '1': 'Pendiente',
+  '2': 'Entregada',
+  '3': 'Sustituida',
+  '4': 'Cancelada',
+};
+
+const obtenerValorMostrado = (fila: FilaReporte, key: string) => {
+  const valor = obtenerValor(fila, key);
+  if (key.toUpperCase() === 'IDSTATUS') {
+    return nombresEstatus[String(valor).trim()] ?? String(valor || '—');
+  }
+  return valor;
+};
+
 export function ReportsView() {
   const [anios, setAnios] = useState<number[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState('');
@@ -157,7 +172,7 @@ export function ReportsView() {
     const filasExcel = [
       columnas.map((columna) => columna.label),
       ...registrosFiltrados.map((registro) =>
-        columnas.map((columna) => obtenerValor(registro, columna.key))
+        columnas.map((columna) => obtenerValorMostrado(registro, columna.key))
       ),
     ];
 
@@ -255,12 +270,11 @@ export function ReportsView() {
                 disabled={cargandoReporte}
               >
                 <option value="">Todos</option>
-                {opcionesFiltro('IDSTATUS').map((valor) => {
-                  const nombresEstatus: Record<string, string> = {
-                    '1': 'Pendiente', '2': 'Entregada', '3': 'Sustituida', '4': 'Cancelada',
-                  };
-                  return <option key={valor} value={valor}>{nombresEstatus[valor] ?? valor}</option>;
-                })}
+                {opcionesFiltro('IDSTATUS').map((valor) => (
+                  <option key={valor} value={valor}>
+                    {nombresEstatus[valor] ?? valor}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -342,7 +356,7 @@ export function ReportsView() {
                   >
                     {columnas.map((columna) => (
                       <td className="gestor-td" key={columna.key}>
-                        {String(obtenerValor(registro, columna.key) ?? '—') || '—'}
+                        {String(obtenerValorMostrado(registro, columna.key) ?? '—') || '—'}
                       </td>
                     ))}
                   </tr>
