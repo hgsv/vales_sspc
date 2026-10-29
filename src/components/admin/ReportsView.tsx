@@ -26,8 +26,15 @@ interface FiltrosReporte {
   ur: string;
 }
 
-const obtenerValor = (fila: FilaReporte, key: string) =>
-  fila[key] ?? fila[key.toLowerCase()] ?? fila[key.toUpperCase()] ?? '';
+const obtenerValor = (fila: FilaReporte, key: string) => {
+  if (!fila) return '';
+  return (
+    fila[key] ??
+    fila[key.toLowerCase()] ??
+    fila[key.toUpperCase()] ??
+    ''
+  );
+};
 
 const nombresEstatus: Record<string, string> = {
   '1': 'Pendiente',
@@ -36,26 +43,13 @@ const nombresEstatus: Record<string, string> = {
   '4': 'Cancelada',
 };
 
-const obtenerValorMostrado = (fila: FilaReporte, key: string) => {
-  const valor = obtenerValor(fila, key);
-  if (key.toUpperCase() === 'IDSTATUS') {
-    return nombresEstatus[String(valor).trim()] ?? String(valor || '—');
-  }
-  if (key.toUpperCase() === 'ORIGEN') {
-    const origenRegistro = String(valor).trim().toUpperCase();
-    if (origenRegistro === 'SC') return 'Sector Central (SSPC)';
-    if (origenRegistro === 'GN') return 'Guardia Nacional';
-  }
-  return valor;
-};
-
-const formatearFecha = (valorFecha: unknown) => {
+const formatearFecha = (valorFecha: any) => {
   if (!valorFecha) return '—';
   
-  const fecha = new Date(String(valorFecha));
+  const fecha = new Date(valorFecha);
   
   if (isNaN(fecha.getTime())) {
-    return valorFecha; 
+    return String(valorFecha);
   }
 
   const dia = String(fecha.getDate()).padStart(2, '0');
@@ -63,6 +57,24 @@ const formatearFecha = (valorFecha: unknown) => {
   const anio = fecha.getFullYear();
 
   return `${dia}/${mes}/${anio}`;
+};
+
+const obtenerValorMostrado = (fila: FilaReporte, key: string) => {
+  const valor = obtenerValor(fila, key);
+  const upperKey = key.toUpperCase();
+
+  if (upperKey === 'IDSTATUS') {
+    return nombresEstatus[String(valor).trim()] ?? String(valor || '—');
+  }
+  if (upperKey === 'ORIGEN') {
+    const origenRegistro = String(valor).trim().toUpperCase();
+    if (origenRegistro === 'SC') return 'Sector Central (SSPC)';
+    if (origenRegistro === 'GN') return 'Guardia Nacional';
+  }
+  if (upperKey === 'CREATED_AT') {
+    return formatearFecha(valor);
+  }
+  return valor !== null && valor !== undefined && String(valor).trim() !== '' ? String(valor) : 'N/A';
 };
 
 export function ReportsView() {
@@ -94,7 +106,9 @@ export function ReportsView() {
           .filter(Boolean)
       )
     ).sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+    
   const opcionesEnlace = opcionesFiltro('IDENLACE');
+  const tieneColumnaOrigen = columnas.some((c) => c.key.toUpperCase() === 'ORIGEN');
 
   const registrosFiltrados = registros.filter((registro) =>
     (!filtros.enlace || String(obtenerValor(registro, 'IDENLACE')).trim() === filtros.enlace) &&
@@ -194,11 +208,7 @@ export function ReportsView() {
     const filasExcel = [
       columnas.map((columna) => columna.label),
       ...registrosFiltrados.map((registro) =>
-        columnas.map((columna) => {
-          const valorCrudo = obtenerValorMostrado(registro, columna.key);
-          const esFecha = ['CREATED_AT', 'FECHA', 'FECHAREGISTRO', 'fecha_registro'].includes(columna.key.toUpperCase());
-          return esFecha ? formatearFecha(valorCrudo) : valorCrudo;
-        })
+        columnas.map((columna) => obtenerValorMostrado(registro, columna.key))
       ),
     ];
 
@@ -219,7 +229,7 @@ export function ReportsView() {
       <div className="gestor-header">
         <h2 className="gestor-title">Reportes de registros</h2>
         <p className="gestor-subtitle">
-          Consulta los registros por año correspondientes à tu origen: {origenLabel}.
+          Consulta los registros por año correspondientes a tu origen: {origenLabel}.
         </p>
       </div>
 
@@ -261,7 +271,7 @@ export function ReportsView() {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: `repeat(${opcionesEnlace.length > 1 ? 4 : 3}, minmax(120px, 1fr))`,
+              gridTemplateColumns: `repeat(${opcionesEnlace.length > 1 ? (tieneColumnaOrigen ? 4 : 3) : (tieneColumnaOrigen ? 3 : 2)}, minmax(120px, 1fr))`,
               gap: 12,
               flex: '1 1 700px',
               minWidth: 0,
@@ -305,26 +315,28 @@ export function ReportsView() {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="gestor-input-label" htmlFor="reporte-origen">ORIGEN</label>
-              <select
-                id="reporte-origen"
-                className="gestor-text-input"
-                value={filtros.origen}
-                onChange={(event) => {
-                  setFiltros((actual) => ({ ...actual, origen: event.target.value }));
-                  setPagina(1);
-                }}
-                disabled={cargandoReporte}
-              >
-                <option value="">Todos</option>
-                {opcionesFiltro('ORIGEN').map((valor) => (
-                  <option key={valor} value={valor.toUpperCase()}>
-                    {valor.toUpperCase() === 'SC' ? 'Sector Central (SSPC)' : valor.toUpperCase() === 'GN' ? 'Guardia Nacional' : valor}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {tieneColumnaOrigen && (
+              <div>
+                <label className="gestor-input-label" htmlFor="reporte-origen">ORIGEN</label>
+                <select
+                  id="reporte-origen"
+                  className="gestor-text-input"
+                  value={filtros.origen}
+                  onChange={(event) => {
+                    setFiltros((actual) => ({ ...actual, origen: event.target.value }));
+                    setPagina(1);
+                  }}
+                  disabled={cargandoReporte}
+                >
+                  <option value="">Todos</option>
+                  {opcionesFiltro('ORIGEN').map((valor) => (
+                    <option key={valor} value={valor.toUpperCase()}>
+                      {valor.toUpperCase() === 'SC' ? 'Sector Central (SSPC)' : valor.toUpperCase() === 'GN' ? 'Guardia Nacional' : valor}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className="gestor-input-label" htmlFor="reporte-ur">UR</label>
               <select
@@ -382,17 +394,11 @@ export function ReportsView() {
                       (inicio + index) % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'
                     }
                   >
-                    {columnas.map((columna) => {
-                      const valorCrudo = obtenerValorMostrado(registro, columna.key);
-                      const esFecha = ['CREATED_AT', 'FECHA', 'FECHAREGISTRO', 'fecha_registro'].includes(columna.key.toUpperCase());
-                      const valorFinal = esFecha ? formatearFecha(valorCrudo) : (valorCrudo ?? '—');
-
-                      return (
-                        <td className="gestor-td" key={columna.key}>
-                          {String(valorFinal) || '—'}
-                        </td>
-                      );
-                    })}
+                    {columnas.map((columna) => (
+                      <td className="gestor-td" key={columna.key}>
+                        {obtenerValorMostrado(registro, columna.key)}
+                      </td>
+                    ))}
                   </tr>
                 ))}
 
