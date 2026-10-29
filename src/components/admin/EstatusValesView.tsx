@@ -57,7 +57,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
 
   // Estados para Tarjetas
-// Estados para Tarjetas
+  // Estados para Tarjetas
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Estados para Pensiones
@@ -312,7 +312,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      setFileName(file.name);
     }
   };
 
@@ -351,7 +350,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           confirmButtonColor: '#800020',
         });
         setSelectedFile(null);
-        setFileName('');
         await fetchRegistros();
       } else {
         alert(data.message || 'Error al procesar el archivo.');
@@ -369,7 +367,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedPensionesFile(file);
-      setPensionesFileName(file.name);
     }
   };
 
@@ -387,7 +384,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
     try {
       const response = await fetch(
-        `${API_ENDPOINTS.MAIN}/gestor/vales/cargar-pensiones`, // Ajusta el endpoint según tu backend
+        `${API_ENDPOINTS.MAIN}/gestor/vales/cargar-pensiones`,
         {
           method: 'POST',
           headers: {
@@ -408,7 +405,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           confirmButtonColor: '#800020',
         });
         setSelectedPensionesFile(null);
-        setPensionesFileName('');
         await fetchRegistros();
       } else {
         alert(data.message || 'Error al procesar el archivo de pensiones.');
@@ -420,7 +416,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       setLoading(false);
     }
   };
-
   const abrirFormato = async (idRegister: number | string | undefined) => {
     if (idRegister === undefined || idRegister === null) {
       alert('Error: El ID del registro no está definido.');
