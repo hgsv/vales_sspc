@@ -44,7 +44,6 @@ type EmpleadoCargado = {
   origen: string;
 };
 
-
 export function GestorView({ origenUsuario }: GestorViewProps) {
   const [empleadosCargados, setEmpleadosCargados] =
     useState<EmpleadoCargado[]>([]);
@@ -57,7 +56,6 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [numEmpleadoInput, setNumEmpleadoInput] = useState('');
   const [busquedaRealizada, setBusquedaRealizada] = useState(false);
-  const [importeAsignar, setImporteAsignar] = useState('15000');
 
   const [seleccionadosMap, setSeleccionadosMap] = useState<{
     [key: string]: Empleado;
@@ -73,20 +71,6 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const [archivoPensionados, setArchivoPensionados] = useState<File | null>(null);
   const [subiendoPensionados, setSubiendoPensionados] = useState(false);
   const archivoPensionadosRef = useRef<HTMLInputElement>(null);
-
-  const validarImporteAsignar = (): number | null => {
-    const importe = Number(importeAsignar);
-    if (!importeAsignar.trim() || !Number.isFinite(importe) || importe <= 0) {
-      void Swal.fire({
-        icon: 'warning',
-        title: 'Importe no válido',
-        text: 'Ingresa un importe mayor que cero para continuar.',
-        confirmButtonColor: '#800020',
-      });
-      return null;
-    }
-    return importe;
-  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -275,9 +259,6 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       return;
     }
 
-    const importe = validarImporteAsignar();
-    if (importe === null) return;
-
     const extension = archivoCarga.name.split('.').pop()?.toLowerCase();
 
     if (!extension || !['xlsx', 'xls', 'csv'].includes(extension)) {
@@ -423,17 +404,13 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
         );
       }
 
-      const importeTexto = importe.toLocaleString('es-MX', {
-        style: 'currency',
-        currency: 'MXN',
-      });
       const confirmacion = await Swal.fire({
         icon: 'question',
         title: 'Confirmar carga',
         text: `Se guardarán ${empleadosArchivo.length} registros de ${origenSeleccionado === 'GN'
           ? 'Guardia Nacional'
           : 'Sector Central'
-          }. Importe a asignar: ${importeTexto}. ¿Deseas continuar?`,
+          }. ¿Deseas continuar?`,
         showCancelButton: true,
         confirmButtonText: 'Sí, guardar',
         cancelButtonText: 'Cancelar',
@@ -453,7 +430,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',
           },
-          body: JSON.stringify({ empleados: empleadosArchivo, importe }),
+          body: JSON.stringify({ empleados: empleadosArchivo }),
         }
       );
 
@@ -579,7 +556,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
           const rfc = valor(fila, indices.rfc).toUpperCase();
           const porcentaje = Number(valor(fila, indices.porcentaje).replace('%', '').replace(',', '.'));
 
-          if (!numEmpleado || !nombrePensionado || !curp || !rfc || !Number.isInteger(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+          if (!numEmpleado || !nombrePensionado || !Number.isInteger(porcentaje) || porcentaje < 0 || porcentaje > 100) {
             throw new Error(`La fila ${indiceEncabezados + index + 2} contiene datos incompletos o un porcentaje inválido.`);
           }
 
@@ -630,7 +607,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
         const numero = numeroEmpleado.trim().toUpperCase();
         const curps = curpsPorEmpleado.get(numero);
         if (!curps || curps.size === 0 || noActualizados.has(numero)) return pensionActual;
-        return `SI (${curps.size} pensionado${curps.size === 1 ? '' : 's'})`;
+        return `SI`;
       };
       setEmpleados((actuales) => actuales.map((emp) => ({
         ...emp,
@@ -643,7 +620,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       await Swal.fire({
         icon: sinRegistro.length > 0 || sinNombre.length > 0 ? 'warning' : 'success',
         title: 'Carga de pensionados completada',
-        text: `Empleados actualizados: ${data.empleadosActualizados ?? 0}. Filas de REGISTERS con PENSION confirmado: ${data.registrosPensionActualizados ?? 0}. Registros de pensionados guardados: ${data.pensionadosGuardados ?? 0}. Sin registro del año/origen actual: ${sinRegistro.length}${sinRegistro.length ? ` (${sinRegistro.slice(0, 10).join(', ')})` : ''}. Sin nombre en la base ni en el archivo: ${sinNombre.length}${sinNombre.length ? ` (${sinNombre.slice(0, 10).join(', ')})` : ''}.`,
+        text: `Empleados actualizados: ${data.empleadosActualizados ?? 0}. Filas de registros con pensión confirmado: ${data.registrosPensionActualizados ?? 0}. Registros de pensionados guardados: ${data.pensionadosGuardados ?? 0}. Sin registro del año/origen actual: ${sinRegistro.length}${sinRegistro.length ? ` (${sinRegistro.slice(0, 10).join(', ')})` : ''}. Sin nombre en la base ni en el archivo: ${sinNombre.length}${sinNombre.length ? ` (${sinNombre.slice(0, 10).join(', ')})` : ''}.`,
         confirmButtonColor: '#800020',
       });
       setArchivoPensionados(null);
@@ -674,16 +651,9 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
       return;
     }
 
-    const importe = validarImporteAsignar();
-    if (importe === null) return;
-
-    const importeTexto = importe.toLocaleString('es-MX', {
-      style: 'currency',
-      currency: 'MXN',
-    });
     const result = await Swal.fire({
       title: '¿Estás seguro?',
-      text: `¿Registrar a los ${empleadosSeleccionados.length} empleados seleccionados con importe de ${importeTexto}?`,
+      text: `¿Registrar a los ${empleadosSeleccionados.length} empleados seleccionados?`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Sí, registrar',
@@ -708,7 +678,6 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
           },
           body: JSON.stringify({
             empleados: empleadosSeleccionados,
-            importe,
           }),
         }
       );
@@ -840,24 +809,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
 
           <form onSubmit={handleSubirArchivo}>
             <div className="gestor-input-wrapper">
-              <div style={{ minWidth: 220, maxWidth: 280, flex: '1 1 220px' }}>
-                <label className="gestor-input-label" htmlFor="importe-asignar">
-                  IMPORTE A ASIGNAR (MXN)
-                </label>
-                <input
-                  id="importe-asignar"
-                  type="number"
-                  className="gestor-text-input"
-                  min="0.01"
-                  step="0.01"
-                  required
-                  value={importeAsignar}
-                  onChange={(event) => setImporteAsignar(event.target.value)}
-                  style={{ marginTop: 6 }}
-                  aria-describedby="importe-asignar-ayuda"
-                />
-              </div>
-              <div>
+              <div style={{ flex: '1 1 280px' }}>
                 <label
                   className="gestor-input-label"
                   htmlFor="archivo-empleados"
@@ -1180,6 +1132,3 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
     </div>
   );
 }
-
-
-

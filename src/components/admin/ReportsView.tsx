@@ -49,6 +49,22 @@ const obtenerValorMostrado = (fila: FilaReporte, key: string) => {
   return valor;
 };
 
+const formatearFecha = (valorFecha: unknown) => {
+  if (!valorFecha) return '—';
+  
+  const fecha = new Date(String(valorFecha));
+  
+  if (isNaN(fecha.getTime())) {
+    return valorFecha; 
+  }
+
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const anio = fecha.getFullYear();
+
+  return `${dia}/${mes}/${anio}`;
+};
+
 export function ReportsView() {
   const [anios, setAnios] = useState<number[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState('');
@@ -178,7 +194,11 @@ export function ReportsView() {
     const filasExcel = [
       columnas.map((columna) => columna.label),
       ...registrosFiltrados.map((registro) =>
-        columnas.map((columna) => obtenerValorMostrado(registro, columna.key))
+        columnas.map((columna) => {
+          const valorCrudo = obtenerValorMostrado(registro, columna.key);
+          const esFecha = ['CREATED_AT', 'FECHA', 'FECHAREGISTRO', 'fecha_registro'].includes(columna.key.toUpperCase());
+          return esFecha ? formatearFecha(valorCrudo) : valorCrudo;
+        })
       ),
     ];
 
@@ -199,7 +219,7 @@ export function ReportsView() {
       <div className="gestor-header">
         <h2 className="gestor-title">Reportes de registros</h2>
         <p className="gestor-subtitle">
-          Consulta los registros por año correspondientes a tu origen: {origenLabel}.
+          Consulta los registros por año correspondientes à tu origen: {origenLabel}.
         </p>
       </div>
 
@@ -362,11 +382,17 @@ export function ReportsView() {
                       (inicio + index) % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'
                     }
                   >
-                    {columnas.map((columna) => (
-                      <td className="gestor-td" key={columna.key}>
-                        {String(obtenerValorMostrado(registro, columna.key) ?? '—') || '—'}
-                      </td>
-                    ))}
+                    {columnas.map((columna) => {
+                      const valorCrudo = obtenerValorMostrado(registro, columna.key);
+                      const esFecha = ['CREATED_AT', 'FECHA', 'FECHAREGISTRO', 'fecha_registro'].includes(columna.key.toUpperCase());
+                      const valorFinal = esFecha ? formatearFecha(valorCrudo) : (valorCrudo ?? '—');
+
+                      return (
+                        <td className="gestor-td" key={columna.key}>
+                          {String(valorFinal) || '—'}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))}
 

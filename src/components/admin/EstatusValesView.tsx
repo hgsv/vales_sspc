@@ -47,6 +47,10 @@ interface RegistroVale {
 
   pension?: string | number | null;
   PENSION?: string | number | null;
+
+  importe?: string | number | null;
+  IMPORTE?: string | number | null;
+  Importe?: string | number | null;
 }
 
 type CampoFiltro = 'numero' | 'nombre' | 'cuenta' | 'estatus';
@@ -56,9 +60,9 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
   const [loading, setLoading] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
 
-  // Estados para Tarjetas
-  // Estados para Tarjetas
+  // Estados para Tarjetas e Importe
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [importeCarga, setImporteCarga] = useState('15000');
 
   // Estados para Pensiones
   const [selectedPensionesFile, setSelectedPensionesFile] = useState<File | null>(null);
@@ -133,6 +137,9 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
   const obtenerPension = (reg: RegistroVale) =>
     reg.PENSION ?? reg.pension ?? '';
+
+  const obtenerImporte = (reg: RegistroVale) =>
+    reg.importe ?? reg.IMPORTE ?? reg.Importe ?? '';
 
   const fetchRegistros = async () => {
     setLoading(true);
@@ -307,7 +314,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     }
   };
 
-  // Manejador para Tarjetas
+  // Manejador para Tarjetas con Importe
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -321,9 +328,21 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       return;
     }
 
+    const importeNum = Number(importeCarga);
+    if (!importeCarga.trim() || !Number.isFinite(importeNum) || importeNum <= 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Importe no válido',
+        text: 'Ingresa un importe mayor que cero para continuar.',
+        confirmButtonColor: '#800020',
+      });
+      return;
+    }
+
     const token = localStorage.getItem('auth_token');
     const formData = new FormData();
     formData.append('archivo', selectedFile);
+    formData.append('importe', importeCarga);
 
     setLoading(true);
 
@@ -346,7 +365,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
         await Swal.fire({
           icon: 'success',
           title: 'Carga exitosa',
-          text: data.message || 'Tarjetas cargadas y asociadas correctamente.',
+          text: data.message || 'Tarjetas cargadas e importe asignados correctamente.',
           confirmButtonColor: '#800020',
         });
         setSelectedFile(null);
@@ -416,6 +435,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       setLoading(false);
     }
   };
+
   const abrirFormato = async (idRegister: number | string | undefined) => {
     if (idRegister === undefined || idRegister === null) {
       alert('Error: El ID del registro no está definido.');
@@ -513,7 +533,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     );
   }
 
-
   return (
     <div className="gestor-container">
       <div
@@ -530,112 +549,129 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           <h2 className="gestor-title">Control y Entrega de Tarjetas</h2>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <label
-            htmlFor="upload-tarjetas-input"
-            className="btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              backgroundColor: '#0284c7',
-              borderColor: '#0284c7',
-              margin: 0,
-              padding: '8px 16px',
-              color: '#ffffff',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
-          >
-            📁 Cargar Tarjetas (.csv)
-          </label>
+        {/* Solo visible para usuarios con idType === 1 */}
+        {idType === 1 && (
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
+            
+            {/* --- CARGAR TARJETAS E IMPORTE --- */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <input
+                type="number"
+                placeholder="Importe (MXN)"
+                value={importeCarga}
+                onChange={(e) => setImporteCarga(e.target.value)}
+                className="gestor-text-input"
+                style={{ width: '130px', padding: '8px' }}
+                min="0.01"
+                step="0.01"
+              />
 
-          <input
-            id="upload-tarjetas-input"
-            type="file"
-            accept=".csv,.txt,.xlsx,.xls"
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
+              <label
+                htmlFor="upload-tarjetas-input"
+                className="btn-primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: '#0284c7',
+                  borderColor: '#0284c7',
+                  margin: 0,
+                  padding: '8px 16px',
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                📁 Cargar Tarjetas (.csv)
+              </label>
 
-          {selectedFile && (
-            <button
-              type="button"
-              onClick={handleEnviarArchivo}
-              className="btn-primary"
-              style={{
-                backgroundColor: '#16a34a',
-                borderColor: '#16a34a',
-                padding: '8px 16px',
-                color: '#ffffff',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              ✅ Agregar tarjetas
-            </button>
-          )}
-        </div>
+              <input
+                id="upload-tarjetas-input"
+                type="file"
+                accept=".csv,.txt,.xlsx,.xls"
+                style={{ display: 'none' }}
+                onChange={handleFileChange}
+              />
 
-        {/* --- 2. CARGAR PENSIONES --- */}
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <label
-            htmlFor="upload-pensiones-input"
-            className="btn-primary"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              backgroundColor: '#0284c7',
-              borderColor: '#0284c7',
-              margin: 0,
-              padding: '8px 16px',
-              color: '#ffffff',
-              borderRadius: '6px',
-              fontSize: '14px',
-              fontWeight: 500,
-            }}
-          >
-            📁 Cargar Pensiones (.xlsx)
-          </label>
+              {selectedFile && (
+                <button
+                  type="button"
+                  onClick={handleEnviarArchivo}
+                  className="btn-primary"
+                  style={{
+                    backgroundColor: '#16a34a',
+                    borderColor: '#16a34a',
+                    padding: '8px 16px',
+                    color: '#ffffff',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✅ Agregar tarjetas
+                </button>
+              )}
+            </div>
 
-          <input
-            id="upload-pensiones-input"
-            type="file"
-            accept=".csv,.xlsx,.xls"
-            style={{ display: 'none' }}
-            onChange={handleFileChangePensiones}
-          />
+            {/* --- CARGAR PENSIONES --- */}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <label
+                htmlFor="upload-pensiones-input"
+                className="btn-primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: '#0284c7',
+                  borderColor: '#0284c7',
+                  margin: 0,
+                  padding: '8px 16px',
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                📁 Cargar Pensiones (.xlsx)
+              </label>
 
-          {selectedPensionesFile && (
-            <button
-              type="button"
-              onClick={handleEnviarArchivoPensiones}
-              className="btn-primary"
-              style={{
-                backgroundColor: '#16a34a',
-                borderColor: '#16a34a',
-                padding: '8px 16px',
-                color: '#ffffff',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              ✅ Agregar pensiones
-            </button>
-          )}
-        </div>
+              <input
+                id="upload-pensiones-input"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                style={{ display: 'none' }}
+                onChange={handleFileChangePensiones}
+              />
 
+              {selectedPensionesFile && (
+                <button
+                  type="button"
+                  onClick={handleEnviarArchivoPensiones}
+                  className="btn-primary"
+                  style={{
+                    backgroundColor: '#16a34a',
+                    borderColor: '#16a34a',
+                    padding: '8px 16px',
+                    color: '#ffffff',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✅ Agregar pensiones
+                </button>
+              )}
+            </div>
+
+          </div>
+        )}
       </div>
 
-      {/* Aquí continúa el resto de tu interfaz (filtros, tabla de registros, paginación, etc.) */}
       <div className="gestor-card">
         {loading ? (
           <p>Cargando registros...</p>
@@ -715,6 +751,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   {idType === 1 && <th>Origen del registro</th>}
                   <th>Cuenta Asignada</th>
                   <th>Pensiones</th>
+                  <th>Importe</th>
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
                   <th style={{ textAlign: 'center' }}>Descargar formatos</th>
                   <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
@@ -753,6 +790,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                     />
                   </th>
                   <th></th>
+                  <th></th>
                   <th>
                     <select
                       style={inputFiltroStyle}
@@ -783,6 +821,11 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   const enlace = obtenerEnlace(reg);
                   const cuenta = obtenerCuenta(reg);
                   const pension = obtenerPension(reg);
+                  const importeRaw = obtenerImporte(reg);
+                  const importeFormateado =
+                    importeRaw !== '' && importeRaw !== null && !Number.isNaN(Number(importeRaw))
+                      ? Number(importeRaw).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
+                      : importeRaw || '-';
 
                   const colorEstatus =
                     estatusActual === 2
@@ -818,6 +861,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                       )}
                       <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
                       <td className="gestor-td">{pension || 'N/A'}</td>
+                      <td className="gestor-td">{importeFormateado}</td>
 
                       <td className="gestor-td-center">
                         <span
@@ -892,7 +936,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={idType === 1 ? 11 : 10} className="gestor-empty-row">
+                    <td colSpan={idType === 1 ? 12 : 11} className="gestor-empty-row">
                       No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>
