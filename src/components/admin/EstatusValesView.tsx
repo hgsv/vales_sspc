@@ -4,7 +4,6 @@ import { API_ENDPOINTS, apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
 import { TarjetasView } from './TarjetasView';
 
-
 interface RegistroVale {
   idRegister?: number | string;
   idregister?: number | string;
@@ -56,8 +55,15 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
   const [registros, setRegistros] = useState<RegistroVale[]>([]);
   const [loading, setLoading] = useState(false);
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
+
+  // Estados para Tarjetas
   const [fileName, setFileName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Estados para Pensiones
+  const [pensionesFileName, setPensionesFileName] = useState('');
+  const [selectedPensionesFile, setSelectedPensionesFile] = useState<File | null>(null);
+
   const [registroTarjetas, setRegistroTarjetas] =
     useState<RegistroVale | null>(null);
   const [filtros, setFiltros] = useState<Record<CampoFiltro, string>>({
@@ -244,7 +250,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
         window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 
-        // Pausa breve para que el navegador inicie cada descarga.
         await new Promise((resolve) => window.setTimeout(resolve, 300));
       }
 
@@ -303,9 +308,9 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     }
   };
 
+  // Manejador para Tarjetas
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-
     if (file) {
       setSelectedFile(file);
       setFileName(file.name);
@@ -314,7 +319,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
   const handleEnviarArchivo = async () => {
     if (!selectedFile) {
-      alert('Por favor selecciona un archivo primero.');
+      alert('Por favor selecciona un archivo de tarjetas primero.');
       return;
     }
 
@@ -355,6 +360,63 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     } catch (error) {
       console.error('Error al subir el archivo:', error);
       alert('Error de conexión al subir el archivo.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Manejador para Pensiones
+  const handleFileChangePensiones = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedPensionesFile(file);
+      setPensionesFileName(file.name);
+    }
+  };
+
+  const handleEnviarArchivoPensiones = async () => {
+    if (!selectedPensionesFile) {
+      alert('Por favor selecciona un archivo de pensiones primero.');
+      return;
+    }
+
+    const token = localStorage.getItem('auth_token');
+    const formData = new FormData();
+    formData.append('archivo', selectedPensionesFile);
+
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/vales/cargar-pensiones`, // Ajusta el endpoint según tu backend
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.status) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Carga exitosa',
+          text: data.message || 'Pensiones cargadas y asociadas correctamente.',
+          confirmButtonColor: '#800020',
+        });
+        setSelectedPensionesFile(null);
+        setPensionesFileName('');
+        await fetchRegistros();
+      } else {
+        alert(data.message || 'Error al procesar el archivo de pensiones.');
+      }
+    } catch (error) {
+      console.error('Error al subir el archivo de pensiones:', error);
+      alert('Error de conexión al subir el archivo de pensiones.');
     } finally {
       setLoading(false);
     }
@@ -437,6 +499,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     borderRadius: '4px',
     fontSize: '12px',
   };
+
   if (registroTarjetas) {
     const idRegistroSeleccionado = obtenerId(registroTarjetas);
 
@@ -455,6 +518,8 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       />
     );
   }
+
+
   return (
     <div className="gestor-container">
       <div
@@ -471,60 +536,118 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           <h2 className="gestor-title">Control y Entrega de Tarjetas</h2>
         </div>
 
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-end',
-            gap: '8px',
-          }}
-        >
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <label
-              htmlFor="upload-tarjetas-input"
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <label
+            htmlFor="upload-tarjetas-input"
+            className="btn-primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              backgroundColor: '#0284c7',
+              borderColor: '#0284c7',
+              margin: 0,
+              padding: '8px 16px',
+              color: '#ffffff',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
+            }}
+          >
+            📁 Cargar Tarjetas (.csv)
+          </label>
+
+          <input
+            id="upload-tarjetas-input"
+            type="file"
+            accept=".csv,.txt,.xlsx,.xls"
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+
+          {selectedFile && (
+            <button
+              type="button"
+              onClick={handleEnviarArchivo}
               className="btn-primary"
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
+                backgroundColor: '#16a34a',
+                borderColor: '#16a34a',
+                padding: '8px 16px',
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
                 cursor: 'pointer',
-                backgroundColor: '#0284c7',
-                borderColor: '#0284c7',
-                margin: 0,
               }}
             >
-              📁 Cargar Tarjetas (.csv)
-            </label>
-
-            <input
-              id="upload-tarjetas-input"
-              type="file"
-              accept=".csv,.txt,.xlsx,.xls"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
-
-            {selectedFile && (
-              <button
-                type="button"
-                onClick={handleEnviarArchivo}
-                className="btn-primary"
-                style={{
-                  backgroundColor: '#16a34a',
-                  borderColor: '#16a34a',
-                }}
-              >
-                ✅ Agregar tarjetas
-              </button>
-            )}
-          </div>
-
-          {fileName && (
-            <span style={{ fontSize: '12px', color: '#64748b' }}>
-              Archivo seleccionado: <strong>{fileName}</strong>
-            </span>
+              ✅ Agregar tarjetas
+            </button>
           )}
         </div>
+
+        {/* --- 2. CARGAR PENSIONES --- */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <label
+            htmlFor="upload-pensiones-input"
+            className="btn-primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              backgroundColor: '#0284c7',
+              borderColor: '#0284c7',
+              margin: 0,
+              padding: '8px 16px',
+              color: '#ffffff',
+              borderRadius: '6px',
+              fontSize: '14px',
+              fontWeight: 500,
+            }}
+          >
+            📁 Cargar Pensiones (.xlsx)
+          </label>
+
+          <input
+            id="upload-pensiones-input"
+            type="file"
+            accept=".csv,.xlsx,.xls"
+            style={{ display: 'none' }}
+            onChange={handleFileChangePensiones}
+          />
+
+          {selectedPensionesFile && (
+            <button
+              type="button"
+              onClick={handleEnviarArchivoPensiones}
+              className="btn-primary"
+              style={{
+                backgroundColor: '#16a34a',
+                borderColor: '#16a34a',
+                padding: '8px 16px',
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              ✅ Agregar pensiones
+            </button>
+          )}
+        </div>
+
+      </div>
+
+      {/* Aquí continúa el resto de tu interfaz (filtros, tabla de registros, paginación, etc.) */}
+      <div className="gestor-card">
+        {loading ? (
+          <p>Cargando registros...</p>
+        ) : (
+          <p>Total de registros encontrados: {registrosFiltrados.length}</p>
+        )}
       </div>
 
       <div
