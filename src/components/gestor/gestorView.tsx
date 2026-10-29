@@ -1053,12 +1053,20 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                     <th>NSS</th>
                     <th>Enlace</th>
                     <th>Nivel</th>
+                    {origenSeleccionado === 'GN' && (
+                      <>
+                        <th>Puesto</th>
+                        <th>Ubicación física</th>
+                        <th>Clave</th>
+                        <th>Modalidad</th>
+                      </>
+                    )}
                     <th>Pensión Alimenticia</th>
                   </tr>
                 </thead>
                 <tbody>
                   {empleadosCargados.map((emp) => (
-                    <tr key={`${emp.num_empleado}`}>
+                    <tr key={`${emp.origen}_${emp.num_empleado}`}>
                       <td>{emp.num_empleado}</td>
                       <td>{emp.nombre_completo}</td>
                       <td>{emp.ur}</td>
@@ -1066,7 +1074,15 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                       <td>{emp.curp}</td>
                       <td>{emp.nss}</td>
                       <td>{emp.enlace || 'N/A'}</td>
-                      <td>{emp.nivel}</td>
+                      <td>{emp.nivel || 'N/A'}</td>
+                      {origenSeleccionado === 'GN' && (
+                        <>
+                          <td>{emp.puesto || 'N/A'}</td>
+                          <td>{emp.ubicacion || 'N/A'}</td>
+                          <td>{emp.clave || 'N/A'}</td>
+                          <td>{emp.modalidad || 'N/A'}</td>
+                        </>
+                      )}
                       <td>{emp.pension || 'N/A'}</td>
                     </tr>
                   ))}
