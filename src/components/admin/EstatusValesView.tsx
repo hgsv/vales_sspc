@@ -57,11 +57,10 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
   const [filtroEstatus, setFiltroEstatus] = useState('todos');
 
   // Estados para Tarjetas
-  const [fileName, setFileName] = useState('');
+// Estados para Tarjetas
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Estados para Pensiones
-  const [pensionesFileName, setPensionesFileName] = useState('');
   const [selectedPensionesFile, setSelectedPensionesFile] = useState<File | null>(null);
 
   const [registroTarjetas, setRegistroTarjetas] =
