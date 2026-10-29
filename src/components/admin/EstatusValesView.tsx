@@ -514,7 +514,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     fontSize: '12px',
   };
 
-  if (registroTarjetas) {
+if (registroTarjetas) {
     const idRegistroSeleccionado = obtenerId(registroTarjetas);
 
     if (idRegistroSeleccionado === undefined || idRegistroSeleccionado === null) {
@@ -529,6 +529,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       <TarjetasView
         idRegister={idRegistroSeleccionado}
         onVolver={() => setRegistroTarjetas(null)}
+        idType={idType} // <--- ¡Añade esta línea aquí!
       />
     );
   }
@@ -552,7 +553,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
         {/* Solo visible para usuarios con idType === 1 */}
         {idType === 1 && (
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-            
+
             {/* --- CARGAR TARJETAS E IMPORTE --- */}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <input
@@ -743,205 +744,205 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           <div className="gestor-table-wrapper">
             <table className="gestor-table">
               <thead>
-  <tr>
-    <th style={{ textAlign: 'center' }}>Seleccionar</th>
-    <th>Núm. Emp</th>
-    <th>Nombre Completo</th>
-    
-    {/* Ocultar la columna Enlace si idType es 3 */}
-    {idType !== 3 && <th>Enlace</th>}
+                <tr>
+                  <th style={{ textAlign: 'center' }}>Seleccionar</th>
+                  <th>Núm. Emp</th>
+                  <th>Nombre Completo</th>
 
-    {idType === 1 && <th>Origen del registro</th>}
-    <th>Cuenta Asignada</th>
-    <th>Pensiones</th>
-    <th>Importe</th>
-    <th style={{ textAlign: 'center' }}>Estatus Actual</th>
-    <th style={{ textAlign: 'center' }}>Descargar formatos</th>
-    <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
-    <th style={{ textAlign: 'center' }}>Tarjetas</th>
-  </tr>
+                  {/* Ocultar la columna Enlace si idType es 3 */}
+                  {idType !== 3 && <th>Enlace</th>}
 
-  <tr>
-    <th></th>
-    <th>
-      <input
-        style={inputFiltroStyle}
-        aria-label="Filtrar por número de empleado"
-        placeholder="Buscar..."
-        value={filtros.numero}
-        onChange={(e) => actualizarFiltro('numero', e.target.value)}
-      />
-    </th>
-    <th>
-      <input
-        style={inputFiltroStyle}
-        aria-label="Filtrar por nombre"
-        placeholder="Buscar..."
-        value={filtros.nombre}
-        onChange={(e) => actualizarFiltro('nombre', e.target.value)}
-      />
-    </th>
+                  {idType === 1 && <th>Origen del registro</th>}
+                  <th>Cuenta Asignada</th>
+                  <th>Pensiones</th>
+                  <th>Importe</th>
+                  <th style={{ textAlign: 'center' }}>Estatus Actual</th>
+                  <th style={{ textAlign: 'center' }}>Descargar formatos</th>
+                  <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
+                  <th style={{ textAlign: 'center' }}>Tarjetas</th>
+                </tr>
 
-    {/* Celda vacía correspondiente al filtro de Enlace si idType NO es 3 */}
-    {idType !== 3 && <th></th>}
+                <tr>
+                  <th></th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por número de empleado"
+                      placeholder="Buscar..."
+                      value={filtros.numero}
+                      onChange={(e) => actualizarFiltro('numero', e.target.value)}
+                    />
+                  </th>
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por nombre"
+                      placeholder="Buscar..."
+                      value={filtros.nombre}
+                      onChange={(e) => actualizarFiltro('nombre', e.target.value)}
+                    />
+                  </th>
 
-    {idType === 1 && <th></th>}
-    <th>
-      <input
-        style={inputFiltroStyle}
-        aria-label="Filtrar por cuenta asignada"
-        placeholder="Buscar..."
-        value={filtros.cuenta}
-        onChange={(e) => actualizarFiltro('cuenta', e.target.value)}
-      />
-    </th>
-    <th></th>
-    <th></th>
-    <th>
-      <select
-        style={inputFiltroStyle}
-        aria-label="Filtrar por estatus actual"
-        value={filtros.estatus}
-        onChange={(e) => actualizarFiltro('estatus', e.target.value)}
-      >
-        <option value="">Todos</option>
-        <option value="pendiente">Pendiente</option>
-        <option value="entregada">Entregada</option>
-        <option value="sustituida">Sustituida</option>
-        <option value="cancelada">Cancelada</option>
-      </select>
-    </th>
-    <th></th>
-    <th></th>
-    <th></th>
-  </tr>
-</thead>
+                  {/* Celda vacía correspondiente al filtro de Enlace si idType NO es 3 */}
+                  {idType !== 3 && <th></th>}
 
-<tbody>
-  {registrosPagina.map((reg, index) => {
-    const idRegister = obtenerId(reg);
-    const estatusActual = obtenerEstatus(reg);
-    const nombreEstatus = obtenerNombreEstatus(estatusActual);
-    const nombreCompleto = obtenerNombreCompleto(reg) || '-';
-    const numEmp = obtenerNumeroEmpleado(reg) || '-';
-    const enlace = obtenerEnlace(reg);
-    const cuenta = obtenerCuenta(reg);
-    const pension = obtenerPension(reg);
-    const importeRaw = obtenerImporte(reg);
-    const importeFormateado =
-      importeRaw !== '' && importeRaw !== null && !Number.isNaN(Number(importeRaw))
-        ? Number(importeRaw).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
-        : importeRaw || '-';
+                  {idType === 1 && <th></th>}
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por cuenta asignada"
+                      placeholder="Buscar..."
+                      value={filtros.cuenta}
+                      onChange={(e) => actualizarFiltro('cuenta', e.target.value)}
+                    />
+                  </th>
+                  <th></th>
+                  <th></th>
+                  <th>
+                    <select
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por estatus actual"
+                      value={filtros.estatus}
+                      onChange={(e) => actualizarFiltro('estatus', e.target.value)}
+                    >
+                      <option value="">Todos</option>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="entregada">Entregada</option>
+                      <option value="sustituida">Sustituida</option>
+                      <option value="cancelada">Cancelada</option>
+                    </select>
+                  </th>
+                  <th></th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
 
-    const colorEstatus =
-      estatusActual === 2
-        ? { backgroundColor: '#d4edda', color: '#155724' }
-        : estatusActual === 3
-          ? { backgroundColor: '#dbeafe', color: '#1e40af' }
-          : estatusActual === 4
-            ? { backgroundColor: '#f8d7da', color: '#721c24' }
-            : { backgroundColor: '#fff3cd', color: '#856404' };
+              <tbody>
+                {registrosPagina.map((reg, index) => {
+                  const idRegister = obtenerId(reg);
+                  const estatusActual = obtenerEstatus(reg);
+                  const nombreEstatus = obtenerNombreEstatus(estatusActual);
+                  const nombreCompleto = obtenerNombreCompleto(reg) || '-';
+                  const numEmp = obtenerNumeroEmpleado(reg) || '-';
+                  const enlace = obtenerEnlace(reg);
+                  const cuenta = obtenerCuenta(reg);
+                  const pension = obtenerPension(reg);
+                  const importeRaw = obtenerImporte(reg);
+                  const importeFormateado =
+                    importeRaw !== '' && importeRaw !== null && !Number.isNaN(Number(importeRaw))
+                      ? Number(importeRaw).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
+                      : importeRaw || '-';
 
-    return (
-      <tr
-        key={idRegister ?? `${numEmp}-${inicio + index}`}
-        className={index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'}
-      >
-        <td className="gestor-td-center">
-          <input
-            type="checkbox"
-            aria-label={`Seleccionar formatos de ${nombreCompleto}`}
-            checked={
-              idRegister !== undefined &&
-              seleccionadosIds.has(String(idRegister))
-            }
-            onChange={() => cambiarSeleccion(idRegister)}
-          />
-        </td>
+                  const colorEstatus =
+                    estatusActual === 2
+                      ? { backgroundColor: '#d4edda', color: '#155724' }
+                      : estatusActual === 3
+                        ? { backgroundColor: '#dbeafe', color: '#1e40af' }
+                        : estatusActual === 4
+                          ? { backgroundColor: '#f8d7da', color: '#721c24' }
+                          : { backgroundColor: '#fff3cd', color: '#856404' };
 
-        <td className="gestor-td gestor-num-emp">{numEmp}</td>
-        <td className="gestor-td">{nombreCompleto}</td>
-        
-        {/* Ocultar la celda Enlace si idType es 3 */}
-        {idType !== 3 && <td className="gestor-td">{enlace || '-'}</td>}
+                  return (
+                    <tr
+                      key={idRegister ?? `${numEmp}-${inicio + index}`}
+                      className={index % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'}
+                    >
+                      <td className="gestor-td-center">
+                        <input
+                          type="checkbox"
+                          aria-label={`Seleccionar formatos de ${nombreCompleto}`}
+                          checked={
+                            idRegister !== undefined &&
+                            seleccionadosIds.has(String(idRegister))
+                          }
+                          onChange={() => cambiarSeleccion(idRegister)}
+                        />
+                      </td>
 
-        {idType === 1 && (
-          <td className="gestor-td">{obtenerOrigen(reg) || '-'}</td>
-        )}
-        <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
-        <td className="gestor-td">{pension || 'N/A'}</td>
-        <td className="gestor-td">{importeFormateado}</td>
+                      <td className="gestor-td gestor-num-emp">{numEmp}</td>
+                      <td className="gestor-td">{nombreCompleto}</td>
 
-        <td className="gestor-td-center">
-          <span
-            style={{
-              padding: '4px 10px',
-              borderRadius: '12px',
-              fontSize: '12px',
-              fontWeight: 'bold',
-              ...colorEstatus,
-            }}
-          >
-            {nombreEstatus}
-          </span>
-        </td>
+                      {/* Ocultar la celda Enlace si idType es 3 */}
+                      {idType !== 3 && <td className="gestor-td">{enlace || '-'}</td>}
 
-        <td className="gestor-td-center">
-          {cuenta ? (
-            <button
-              type="button"
-              onClick={() => abrirFormato(idRegister)}
-              style={{
-                padding: '5px 10px',
-                fontSize: '11px',
-                backgroundColor: '#0284c7',
-                color: '#fff',
-                border: '1px solid #0284c7',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              📄 Descargar
-            </button>
-          ) : (
-            '-'
-          )}
-        </td>
+                      {idType === 1 && (
+                        <td className="gestor-td">{obtenerOrigen(reg) || '-'}</td>
+                      )}
+                      <td className="gestor-td gestor-mono">{cuenta || '-'}</td>
+                      <td className="gestor-td">{pension || 'N/A'}</td>
+                      <td className="gestor-td">{importeFormateado}</td>
 
-        <td className="gestor-td-center">
-          <select
-            aria-label={`Cambiar estatus de ${nombreCompleto}`}
-            value={Number.isNaN(estatusActual) ? '' : String(estatusActual)}
-            onChange={(e) => {
-              if (idRegister !== undefined && idRegister !== null) {
-                void handleCambiarEstatus(idRegister, Number(e.target.value));
-              }
-            }}
-            disabled={idRegister === undefined || idRegister === null}
-          >
-            <option value="" disabled>
-              Selecciona estatus
-            </option>
-            <option value="1">Pendiente</option>
-            <option value="2">Entregada</option>
-            <option value="3">Sustituida</option>
-            <option value="4">Cancelada</option>
-          </select>
-        </td>
+                      <td className="gestor-td-center">
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            ...colorEstatus,
+                          }}
+                        >
+                          {nombreEstatus}
+                        </span>
+                      </td>
 
-        <td className="gestor-td-center">
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setRegistroTarjetas(reg)}
-            disabled={idRegister === undefined || idRegister === null}
-          >
-            Administrar Tarjeta
-          </button>
-        </td>
-      </tr>
-    );
-  })}
+                      <td className="gestor-td-center">
+                        {cuenta ? (
+                          <button
+                            type="button"
+                            onClick={() => abrirFormato(idRegister)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '11px',
+                              backgroundColor: '#0284c7',
+                              color: '#fff',
+                              border: '1px solid #0284c7',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            📄 Descargar
+                          </button>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
+
+                      <td className="gestor-td-center">
+                        <select
+                          aria-label={`Cambiar estatus de ${nombreCompleto}`}
+                          value={Number.isNaN(estatusActual) ? '' : String(estatusActual)}
+                          onChange={(e) => {
+                            if (idRegister !== undefined && idRegister !== null) {
+                              void handleCambiarEstatus(idRegister, Number(e.target.value));
+                            }
+                          }}
+                          disabled={idRegister === undefined || idRegister === null}
+                        >
+                          <option value="" disabled>
+                            Selecciona estatus
+                          </option>
+                          <option value="1">Pendiente</option>
+                          <option value="2">Entregada</option>
+                          <option value="3">Sustituida</option>
+                          <option value="4">Cancelada</option>
+                        </select>
+                      </td>
+
+                      <td className="gestor-td-center">
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => setRegistroTarjetas(reg)}
+                          disabled={idRegister === undefined || idRegister === null}
+                        >
+                          Administrar Tarjeta
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {registrosFiltrados.length === 0 && (
                   <tr>
                     <td colSpan={idType === 1 ? 12 : 11} className="gestor-empty-row">

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Swal from 'sweetalert2';
 import { API_ENDPOINTS } from '../../config/api';
 import '../gestor/GestorView.css';
 
 interface TarjetasViewProps {
   idRegister: number | string;
   onVolver: () => void;
+  idType?: number | null;
 }
 
 type Datos = Record<string, unknown>;
@@ -75,7 +77,7 @@ const obtenerIdEstatus = (estatus: Datos): string =>
 const obtenerNombreEstatus = (estatus: Datos): string =>
   String(leer(estatus, 'status', 'STATUS', 'Status') || '');
 
-export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
+export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps) {
   const [empleado, setEmpleado] = useState<Datos | null>(null);
   const [tarjetas, setTarjetas] = useState<Datos[]>([]);
   const [pensionados, setPensionados] = useState<Datos[]>([]);
@@ -173,8 +175,14 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
       setDescargandoPensionados(false);
     }
   };
+
   const cuentaInicial = texto(
     leer(empleado ?? undefined, 'CUENTAINICIAL', 'cuentainicial'),
+    ''
+  );
+
+  const observacionInicialActual = texto(
+    leer(empleado ?? undefined, 'OBSERVACIONINICIAL', 'observacioninicial', 'ObservacionInicial'),
     ''
   );
 
@@ -193,13 +201,13 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
       cuenta: cuentaInicial,
       folioCard: '',
       status: 'Cuenta inicial',
-      observaciones: 'Cuenta inicial del registro del empleado',
+      observaciones: observacionInicialActual !== '—' ? observacionInicialActual : 'Cuenta inicial del registro del empleado',
       CREATED_AT: leer(empleado ?? undefined, 'CREATED_AT', 'created_at'),
       esCuentaInicial: true,
     };
 
     return [cuentaInicialComoTarjeta, ...tarjetas];
-  }, [cuentaInicial, empleado, idRegister, tarjetas]);
+  }, [cuentaInicial, empleado, idRegister, tarjetas, observacionInicialActual]);
 
   const registrarReemplazo = async (
     e: React.FormEvent<HTMLFormElement>
@@ -264,6 +272,58 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
           ? e.message
           : 'Error al registrar la tarjeta.'
       );
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const editarObservacionInicial = async () => {
+    const { value: observacionTexto } = await Swal.fire({
+      title: 'Editar Observación Inicial',
+      input: 'textarea',
+      inputLabel: 'Comentario u observación',
+      inputValue: observacionInicialActual !== '—' ? observacionInicialActual : '',
+      showCancelButton: true,
+      confirmButtonText: 'Guardar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#800020',
+    });
+
+    if (observacionTexto === undefined) return;
+
+    setGuardando(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/vales/observacion`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          idRegister: idRegister,
+          observacioninicial: observacionTexto,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.status) {
+        throw new Error(result.message || 'No se pudo guardar la observación.');
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Actualizado',
+        text: 'La observación inicial se actualizó correctamente.',
+        confirmButtonColor: '#800020',
+      });
+
+      await cargarDatos();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al guardar la observación.');
     } finally {
       setGuardando(false);
     }
@@ -386,7 +446,6 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
               <div><strong>Estatus del registro:</strong> {texto(leer(empleado, 'IDSTATUS', 'idstatus'))}</div>
               <div><strong>Pensiones:</strong> {texto(leer(empleado, 'PENSION', 'pension'), 'N/A')}</div>
               <div><strong>Importe asignado:</strong> {moneda(leer(empleado, 'IMPORTE', 'importe'))}</div>
-  
             </div>
 
             <div style={{ marginTop: 20 }}>
@@ -425,97 +484,100 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
             </div>
           </div>
 
-          <div className="gestor-card">
-            <h3>Registrar tarjeta de reemplazo</h3>
-            <p>
-              Captura los datos de la nueva tarjeta, por ejemplo, cuando la
-              anterior se extravíe.
-            </p>
+          {/* Sección de reemplazo restringida exclusivamente a idType === 1 */}
+          {idType === 1 && (
+            <div className="gestor-card">
+              <h3>Registrar tarjeta de reemplazo</h3>
+              <p>
+                Captura los datos de la nueva tarjeta, por ejemplo, cuando la
+                anterior se extravíe.
+              </p>
 
-            <form onSubmit={registrarReemplazo}>
-              <div
-                className="gestor-input-wrapper"
-                style={{ flexWrap: 'wrap', gap: '12px' }}
-              >
-                <div>
-                  <label className="gestor-input-label" htmlFor="folioCard">
-                    CUENTA VIGENTE
-                  </label>
-                  <input
-                    id="folioCard"
-                    name="folioCard"
-                    className="gestor-text-input"
-                    value={folioCard}
-                    onChange={(e) => setFolioCard(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="gestor-input-label" htmlFor="cuentaCard">
-                    CUENTA NUEVA
-                  </label>
-                  <input
-                    id="cuentaCard"
-                    name="cuenta"
-                    className="gestor-text-input"
-                    value={cuenta}
-                    onChange={(e) => setCuenta(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="gestor-input-label" htmlFor="estatusCard">
-                    ESTATUS
-                  </label>
-                  <select
-                    id="estatusCard"
-                    name="idStatus"
-                    className="gestor-text-input"
-                    value={idStatus}
-                    onChange={(e) => setIdStatus(e.currentTarget.value)}
-                    required
-                  >
-                    {opcionesEstatus.map((estatus, index) => {
-                      const estatusId = obtenerIdEstatus(estatus);
-
-                      return (
-                        <option key={estatusId || index} value={estatusId}>
-                          {obtenerNombreEstatus(estatus)}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    className="gestor-input-label"
-                    htmlFor="observacionesCard"
-                  >
-                    OBSERVACIONES
-                  </label>
-                  <input
-                    id="observacionesCard"
-                    name="observaciones"
-                    className="gestor-text-input"
-                    value={observaciones}
-                    onChange={(e) => setObservaciones(e.target.value)}
-                    placeholder="Ej. Reposición por extravío"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary"
-                  disabled={guardando}
+              <form onSubmit={registrarReemplazo}>
+                <div
+                  className="gestor-input-wrapper"
+                  style={{ flexWrap: 'wrap', gap: '12px' }}
                 >
-                  {guardando ? 'Guardando...' : 'Registrar reemplazo'}
-                </button>
-              </div>
-            </form>
-          </div>
+                  <div>
+                    <label className="gestor-input-label" htmlFor="folioCard">
+                      CUENTA VIGENTE
+                    </label>
+                    <input
+                      id="folioCard"
+                      name="folioCard"
+                      className="gestor-text-input"
+                      value={folioCard}
+                      onChange={(e) => setFolioCard(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="gestor-input-label" htmlFor="cuentaCard">
+                      CUENTA NUEVA
+                    </label>
+                    <input
+                      id="cuentaCard"
+                      name="cuenta"
+                      className="gestor-text-input"
+                      value={cuenta}
+                      onChange={(e) => setCuenta(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="gestor-input-label" htmlFor="estatusCard">
+                      ESTATUS
+                    </label>
+                    <select
+                      id="estatusCard"
+                      name="idStatus"
+                      className="gestor-text-input"
+                      value={idStatus}
+                      onChange={(e) => setIdStatus(e.currentTarget.value)}
+                      required
+                    >
+                      {opcionesEstatus.map((estatus, index) => {
+                        const estatusId = obtenerIdEstatus(estatus);
+
+                        return (
+                          <option key={estatusId || index} value={estatusId}>
+                            {obtenerNombreEstatus(estatus)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      className="gestor-input-label"
+                      htmlFor="observacionesCard"
+                    >
+                      OBSERVACIONES
+                    </label>
+                    <input
+                      id="observacionesCard"
+                      name="observaciones"
+                      className="gestor-text-input"
+                      value={observaciones}
+                      onChange={(e) => setObservaciones(e.target.value)}
+                      placeholder="Ej. Reposición por extravío"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={guardando}
+                  >
+                    {guardando ? 'Guardando...' : 'Registrar reemplazo'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
 
           <div className="gestor-table-card">
             <div className="gestor-table-wrapper">
@@ -563,7 +625,20 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
 
                         <td className="gestor-td-center">
                           {esCuentaInicial ? (
-                            'Sin registro de tarjeta'
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }}>
+                              <span>Sin registro de tarjeta</span>
+                              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="btn-primary"
+                                  style={{ padding: '4px 8px', fontSize: '11px', backgroundColor: '#b91c1c', borderColor: '#b91c1c' }}
+                                  onClick={() => void editarObservacionInicial()}
+                                  disabled={guardando}
+                                >
+                                    🚨 Reportar Robo/Extravío
+                                </button>
+                              </div>
+                            </div>
                           ) : (
                             <select
                               aria-label={`Cambiar estatus de tarjeta ${String(idCard)}`}
@@ -596,9 +671,12 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
                           )}
                         </td>
 
-                        <td className="gestor-td">
-                          {texto(leer(tarjeta, 'observaciones', 'OBSERVACIONES'))}
-                        </td>
+<td className="gestor-td">
+  {esCuentaInicial 
+    ? texto(observacionInicialActual !== '—' ? observacionInicialActual : leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
+    : texto(leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
+  }
+</td>
 
                         <td className="gestor-td">
                           {fecha(leer(tarjeta, 'CREATED_AT', 'created_at'))}
@@ -636,8 +714,3 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
     </div>
   );
 }
-
-
-
-
-
