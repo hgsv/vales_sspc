@@ -21,6 +21,7 @@ interface Empleado {
   nss?: string;
   origen: 'Sector Central' | 'GN';
   unidad?: string;
+  pension?: string;
 }
 
 interface GestorViewProps {
@@ -69,6 +70,9 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
   const [archivoCarga, setArchivoCarga] = useState<File | null>(null);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
   const archivoInputRef = useRef<HTMLInputElement>(null);
+  const [archivoPensionados, setArchivoPensionados] = useState<File | null>(null);
+  const [subiendoPensionados, setSubiendoPensionados] = useState(false);
+  const archivoPensionadosRef = useRef<HTMLInputElement>(null);
 
   const validarImporteAsignar = (): number | null => {
     const importe = Number(importeAsignar);
@@ -497,6 +501,166 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
     }
   };
 
+  const handleSubirPensionados = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!archivoPensionados) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Selecciona un archivo',
+        text: 'Adjunta el archivo con los datos de pensionados.',
+        confirmButtonColor: '#800020',
+      });
+      return;
+    }
+
+    setSubiendoPensionados(true);
+
+    try {
+      const contenido = await archivoPensionados.arrayBuffer();
+      const libro = XLSX.read(contenido, { type: 'array', raw: false });
+      const primeraHoja = libro.Sheets[libro.SheetNames[0]];
+      if (!primeraHoja) throw new Error('El archivo no contiene una hoja con datos.');
+
+      const filas = XLSX.utils.sheet_to_json<unknown[]>(primeraHoja, {
+        header: 1,
+        defval: '',
+        raw: false,
+      }) as unknown[][];
+
+      const buscarIndice = (encabezados: string[], aliases: string[]) =>
+        encabezados.findIndex((encabezado) => aliases.includes(encabezado));
+      const aliasNumero = ['NUMERODEEMPLEADO', 'NUMEMPLEADO', 'NUMEMP'];
+      const aliasNombreEmpleado = ['NOMBREDEEMPLEADO', 'NOMBREDELEMPLEADO', 'NOMBREEMPLEADO', 'NOMBRECOMPLETO', 'NOMEMPLEADO'];
+      const aliasPensionado = [
+        'NOMBREDELAPENSIONADA', 'NOMBREDELPENSIONADO', 'NOMBREPENSIONADA', 'NOMBREPENSIONADO',
+      ];
+      const aliasCurp = ['CURPDELAPENSIONADA', 'CURPDELPENSIONADO', 'CURPPENSIONADA', 'CURPPENSIONADO'];
+      const aliasRfc = ['RFCDELAPENSIONADA', 'RFCDELPENSIONADO', 'RFCPENSIONADA', 'RFCPENSIONADO'];
+      const aliasPorcentaje = ['PORCENTAJEDEPENSION', 'PORCENTAJEPENSION', 'PORCENTAJE'];
+
+      const indiceEncabezados = filas.findIndex((fila) => {
+        const encabezados = fila.map(normalizarEncabezado);
+        return buscarIndice(encabezados, aliasNumero) >= 0 &&
+          buscarIndice(encabezados, aliasPensionado) >= 0 &&
+          buscarIndice(encabezados, aliasCurp) >= 0 &&
+          buscarIndice(encabezados, aliasRfc) >= 0 &&
+          buscarIndice(encabezados, aliasPorcentaje) >= 0;
+      });
+
+      if (indiceEncabezados < 0) {
+        throw new Error(
+          'No se encontraron las columnas de número de empleado, pensionado, RFC, CURP y porcentaje de pensión.'
+        );
+      }
+
+      const encabezados = filas[indiceEncabezados].map(normalizarEncabezado);
+      const indices = {
+        numero: buscarIndice(encabezados, aliasNumero),
+        nombreEmpleado: buscarIndice(encabezados, aliasNombreEmpleado),
+        pensionado: buscarIndice(encabezados, aliasPensionado),
+        curp: buscarIndice(encabezados, aliasCurp),
+        rfc: buscarIndice(encabezados, aliasRfc),
+        porcentaje: buscarIndice(encabezados, aliasPorcentaje),
+      };
+      if (indices.nombreEmpleado < 0) {
+        throw new Error('No se encontró la columna "Nombre de empleado" o "Nombre del empleado" en el archivo.');
+      }
+      const valor = (fila: unknown[], indice: number) => String(fila[indice] ?? '').trim();
+
+      const pensionados = filas
+        .slice(indiceEncabezados + 1)
+        .filter((fila) => fila.some((celda) => String(celda ?? '').trim() !== ''))
+        .map((fila, index) => {
+          const numEmpleado = valor(fila, indices.numero);
+          const nomEmpleado = indices.nombreEmpleado >= 0 ? valor(fila, indices.nombreEmpleado) : '';
+          const nombrePensionado = valor(fila, indices.pensionado);
+          const curp = valor(fila, indices.curp).toUpperCase();
+          const rfc = valor(fila, indices.rfc).toUpperCase();
+          const porcentaje = Number(valor(fila, indices.porcentaje).replace('%', '').replace(',', '.'));
+
+          if (!numEmpleado || !nombrePensionado || !curp || !rfc || !Number.isInteger(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+            throw new Error(`La fila ${indiceEncabezados + index + 2} contiene datos incompletos o un porcentaje inválido.`);
+          }
+
+          return { numEmpleado, nomEmpleado, nombrePensionado, curp, rfc, porcentaje };
+        });
+
+      if (pensionados.length === 0) throw new Error('El archivo no contiene pensionados para cargar.');
+
+      const empleadosUnicos = new Set(pensionados.map((fila) => fila.numEmpleado)).size;
+      const confirmacion = await Swal.fire({
+        icon: 'question',
+        title: 'Confirmar carga de pensionados',
+        text: `Se cargarán ${pensionados.length} registros para ${empleadosUnicos} empleados. El resumen mostrará el número de pensionados distintos por CURP. ¿Deseas continuar?`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cargar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#800020',
+        cancelButtonColor: '#6c757d',
+      });
+      if (!confirmacion.isConfirmed) return;
+
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/pensionados/cargar`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ pensionados }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.status) {
+        throw new Error(data.message || 'No se pudo cargar la información de pensionados.');
+      }
+
+      const sinRegistro = Array.isArray(data.sinRegistro) ? data.sinRegistro : [];
+      const sinNombre = Array.isArray(data.sinNombre) ? data.sinNombre : [];
+      const noActualizados = new Set(
+        [...sinRegistro, ...sinNombre].map((numero) => String(numero).trim().toUpperCase())
+      );
+      const curpsPorEmpleado = new Map<string, Set<string>>();
+      pensionados.forEach((fila) => {
+        const numero = fila.numEmpleado.trim().toUpperCase();
+        if (!curpsPorEmpleado.has(numero)) curpsPorEmpleado.set(numero, new Set());
+        curpsPorEmpleado.get(numero)?.add(fila.curp);
+      });
+      const resumenPension = (numeroEmpleado: string, pensionActual: string) => {
+        const numero = numeroEmpleado.trim().toUpperCase();
+        const curps = curpsPorEmpleado.get(numero);
+        if (!curps || curps.size === 0 || noActualizados.has(numero)) return pensionActual;
+        return `SI (${curps.size} pensionado${curps.size === 1 ? '' : 's'})`;
+      };
+      setEmpleados((actuales) => actuales.map((emp) => ({
+        ...emp,
+        pension: resumenPension(emp.num_empleado, emp.pension ?? 'N/A'),
+      })));
+      setEmpleadosCargados((actuales) => actuales.map((emp) => ({
+        ...emp,
+        pension: resumenPension(emp.num_empleado, emp.pension),
+      })));
+      await Swal.fire({
+        icon: sinRegistro.length > 0 || sinNombre.length > 0 ? 'warning' : 'success',
+        title: 'Carga de pensionados completada',
+        text: `Empleados actualizados: ${data.empleadosActualizados ?? 0}. Filas de REGISTERS con PENSION confirmado: ${data.registrosPensionActualizados ?? 0}. Registros de pensionados guardados: ${data.pensionadosGuardados ?? 0}. Sin registro del año/origen actual: ${sinRegistro.length}${sinRegistro.length ? ` (${sinRegistro.slice(0, 10).join(', ')})` : ''}. Sin nombre en la base ni en el archivo: ${sinNombre.length}${sinNombre.length ? ` (${sinNombre.slice(0, 10).join(', ')})` : ''}.`,
+        confirmButtonColor: '#800020',
+      });
+      setArchivoPensionados(null);
+      if (archivoPensionadosRef.current) archivoPensionadosRef.current.value = '';
+    } catch (error) {
+      console.error('Error al cargar pensionados:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo cargar el archivo',
+        text: error instanceof Error ? error.message : 'Ocurrió un error al cargar los pensionados.',
+        confirmButtonColor: '#800020',
+      });
+    } finally {
+      setSubiendoPensionados(false);
+    }
+  };
+
   const handleTerminarCaptura = async () => {
     const empleadosSeleccionados = Object.values(seleccionadosMap);
 
@@ -723,6 +887,36 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
             </div>
           </form>
         </div>
+        <div className="gestor-card" style={{ borderLeft: '4px solid #0284c7' }}>
+          <h3 style={{ marginTop: 0, color: '#155724', fontSize: '16px' }}>
+            Carga masiva de pensionados
+          </h3>
+          <form onSubmit={handleSubirPensionados}>
+            <div className="gestor-input-wrapper">
+              <div>
+                <label className="gestor-input-label" htmlFor="archivo-pensionados">
+                  ARCHIVO EXCEL O CSV DE PENSIONADOS
+                </label>
+                <input
+                  ref={archivoPensionadosRef}
+                  id="archivo-pensionados"
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  onChange={(event) => setArchivoPensionados(event.target.files?.[0] ?? null)}
+                  className="gestor-text-input"
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={subiendoPensionados}
+                style={{ marginTop: 18 }}
+              >
+                {subiendoPensionados ? 'Cargando pensionados...' : 'Cargar pensionados'}
+              </button>
+            </div>
+          </form>
+        </div>
         <div
           className="gestor-card"
           style={{ borderLeft: '4px solid #800020' }}
@@ -942,7 +1136,7 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
                       <td className="gestor-td gestor-text-muted">
                         {emp.nivel}
                       </td>
-                      <td className="gestor-td gestor-text-muted">N/A</td>
+                      <td className="gestor-td gestor-text-muted">{emp.pension || 'N/A'}</td>
                     </tr>
                   );
                 })}
@@ -970,3 +1164,6 @@ export function GestorView({ origenUsuario }: GestorViewProps) {
     </div>
   );
 }
+
+
+

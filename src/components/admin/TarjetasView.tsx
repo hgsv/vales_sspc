@@ -14,6 +14,7 @@ interface ApiResponse {
   message?: string;
   data?: {
     empleado?: Datos;
+    pensionados?: Datos[];
     tarjetas?: Datos[];
   };
 }
@@ -77,6 +78,9 @@ const obtenerNombreEstatus = (estatus: Datos): string =>
 export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
   const [empleado, setEmpleado] = useState<Datos | null>(null);
   const [tarjetas, setTarjetas] = useState<Datos[]>([]);
+  const [pensionados, setPensionados] = useState<Datos[]>([]);
+  const [pensionadosDisponibles, setPensionadosDisponibles] = useState(false);
+  const [descargandoPensionados, setDescargandoPensionados] = useState(false);
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
@@ -115,6 +119,8 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
       }
 
       setEmpleado(result.data.empleado);
+      setPensionadosDisponibles(Array.isArray(result.data.pensionados));
+      setPensionados(Array.isArray(result.data.pensionados) ? result.data.pensionados : []);
       setTarjetas(result.data.tarjetas ?? []);
     } catch (e) {
       console.error('Error al cargar las tarjetas del empleado:', e);
@@ -132,6 +138,41 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
     void cargarDatos();
   }, [cargarDatos]);
 
+  const descargarFormatoPensionados = async () => {
+    setDescargandoPensionados(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos-pensionados/${encodeURIComponent(String(idRegister))}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+            Accept: 'application/pdf, application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'No se pudo generar el PDF de pensionados.');
+      }
+
+      const archivo = URL.createObjectURL(await response.blob());
+      const enlace = document.createElement('a');
+      const numeroEmpleado = texto(leer(empleado ?? undefined, 'NUMEMPLEADO', 'numempleado'), String(idRegister));
+      enlace.href = archivo;
+      enlace.download = `pensionados_${numeroEmpleado}.pdf`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      URL.revokeObjectURL(archivo);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al descargar el PDF de pensionados.');
+    } finally {
+      setDescargandoPensionados(false);
+    }
+  };
   const cuentaInicial = texto(
     leer(empleado ?? undefined, 'CUENTAINICIAL', 'cuentainicial'),
     ''
@@ -345,6 +386,42 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
               <div><strong>Estatus del registro:</strong> {texto(leer(empleado, 'IDSTATUS', 'idstatus'))}</div>
               <div><strong>Pensiones:</strong> {texto(leer(empleado, 'PENSION', 'pension'), 'N/A')}</div>
               <div><strong>Importe asignado:</strong> {moneda(leer(empleado, 'IMPORTE', 'importe'))}</div>
+  
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <h3 style={{ margin: 0 }}>{pensionadosDisponibles ? `Pensionados registrados (${pensionados.length})` : 'Pensionados registrados'}</h3>
+                {pensionadosDisponibles && pensionados.length > 0 && (
+                  <button type="button" className="btn-primary" onClick={() => void descargarFormatoPensionados()} disabled={descargandoPensionados}>
+                    {descargandoPensionados ? 'Generando PDF...' : '📄 Descargar PDF de pensionados'}
+                  </button>
+                )}
+              </div>
+              {!pensionadosDisponibles ? (
+                <p>El servicio de tarjetas no devolvió el detalle de pensionados. Actualiza o reinicia el backend.</p>
+              ) : pensionados.length > 0 ? (
+                <div className="gestor-table-wrapper" style={{ marginTop: 12, overflowX: 'auto' }}>
+                  <table className="gestor-table">
+                    <thead>
+                      <tr><th>Nombre del pensionado</th><th>CURP</th><th>RFC</th><th>Cuenta</th><th>Porcentaje</th></tr>
+                    </thead>
+                    <tbody>
+                      {pensionados.map((pensionado, index) => (
+                        <tr key={String(leer(pensionado, 'idPension', 'idpension', 'IDPENSION') || index)}>
+                          <td className="gestor-td">{texto(leer(pensionado, 'nombrePensionado', 'nombrepensionado', 'NOMBREPENSIONADO'))}</td>
+                          <td className="gestor-td gestor-mono">{texto(leer(pensionado, 'curp', 'CURP'))}</td>
+                          <td className="gestor-td gestor-mono">{texto(leer(pensionado, 'rfc', 'RFC'))}</td>
+                          <td className="gestor-td">{texto(leer(pensionado, 'cuenta', 'CUENTA'))}</td>
+                          <td className="gestor-td">{texto(leer(pensionado, 'porcentaje', 'PORCENTAJE'))}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p style={{ marginBottom: 0 }}>No hay pensionados registrados para este empleado.</p>
+              )}
             </div>
           </div>
 
@@ -559,3 +636,8 @@ export function TarjetasView({ idRegister, onVolver }: TarjetasViewProps) {
     </div>
   );
 }
+
+
+
+
+
