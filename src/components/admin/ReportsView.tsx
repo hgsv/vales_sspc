@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
@@ -110,6 +110,13 @@ export function ReportsView() {
   const opcionesEnlace = opcionesFiltro('IDENLACE');
   const tieneColumnaOrigen = columnas.some((c) => c.key.toUpperCase() === 'ORIGEN');
 
+  // Filtrar columnas visibles según corresponda a GN
+  const columnasVisibles = useMemo(() => {
+    if (origen === 'GN') return columnas;
+    const keysExclusivasGN = ['PUESTO', 'UBICACION', 'CLAVE', 'MODALIDAD'];
+    return columnas.filter((col) => !keysExclusivasGN.includes(col.key.toUpperCase()));
+  }, [columnas, origen]);
+
   const registrosFiltrados = registros.filter((registro) =>
     (!filtros.enlace || String(obtenerValor(registro, 'IDENLACE')).trim() === filtros.enlace) &&
     (!filtros.estatus || String(obtenerValor(registro, 'IDSTATUS')).trim() === filtros.estatus) &&
@@ -203,17 +210,17 @@ export function ReportsView() {
   }, [cargarReporte]);
 
   const exportarExcel = () => {
-    if (registrosFiltrados.length === 0 || columnas.length === 0) return;
+    if (registrosFiltrados.length === 0 || columnasVisibles.length === 0) return;
 
     const filasExcel = [
-      columnas.map((columna) => columna.label),
+      columnasVisibles.map((columna) => columna.label),
       ...registrosFiltrados.map((registro) =>
-        columnas.map((columna) => obtenerValorMostrado(registro, columna.key))
+        columnasVisibles.map((columna) => obtenerValorMostrado(registro, columna.key))
       ),
     ];
 
     const hoja = XLSX.utils.aoa_to_sheet(filasExcel);
-    hoja['!cols'] = columnas.map((columna) => ({
+    hoja['!cols'] = columnasVisibles.map((columna) => ({
       wch: Math.min(Math.max(columna.label.length + 4, 16), 32),
     }));
 
@@ -381,7 +388,7 @@ export function ReportsView() {
             <table className="gestor-table">
               <thead>
                 <tr>
-                  {columnas.map((columna) => (
+                  {columnasVisibles.map((columna) => (
                     <th key={columna.key}>{columna.label}</th>
                   ))}
                 </tr>
@@ -394,7 +401,7 @@ export function ReportsView() {
                       (inicio + index) % 2 === 0 ? 'gestor-tr-even' : 'gestor-tr-odd'
                     }
                   >
-                    {columnas.map((columna) => (
+                    {columnasVisibles.map((columna) => (
                       <td className="gestor-td" key={columna.key}>
                         {obtenerValorMostrado(registro, columna.key)}
                       </td>
@@ -404,7 +411,7 @@ export function ReportsView() {
 
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={Math.max(columnas.length, 1)} className="gestor-empty-row">
+                    <td colSpan={Math.max(columnasVisibles.length, 1)} className="gestor-empty-row">
                       {registros.length === 0
                         ? `No hay registros de ${origenLabel} para el año seleccionado.`
                         : 'No hay registros que coincidan con los filtros seleccionados.'}
