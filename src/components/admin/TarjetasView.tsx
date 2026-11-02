@@ -28,7 +28,7 @@ const ESTATUS_TARJETA: Datos[] = [
   { idStatus: 4, status: 'Cancelada' },
 ];
 
-const leer = (objeto: Datos | undefined, ...claves: string[]): unknown => {
+const leer = (objeto: Datos | null |undefined, ...claves: string[]): unknown => {
   if (!objeto) return '';
 
   for (const clave of claves) {
