@@ -140,6 +140,24 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     void cargarDatos();
   }, [cargarDatos]);
 
+  // Cálculo del importe neto descontando el porcentaje de las pensiones
+  const importeTotalNum = useMemo(() => {
+    const raw = leer(empleado, 'IMPORTE', 'importe');
+    return Number(String(raw).replace(/[,$\s]/g, '')) || 0;
+  }, [empleado]);
+
+  const porcentajeTotalPensiones = useMemo(() => {
+    return pensionados.reduce((acumulado, p) => {
+      const porc = Number(String(leer(p, 'porcentaje', 'PORCENTAJE')).replace(/[,%\s]/g, '')) || 0;
+      return acumulado + porc;
+    }, 0);
+  }, [pensionados]);
+
+  const importeNetoEmpleado = useMemo(() => {
+    const descuento = (importeTotalNum * porcentajeTotalPensiones) / 100;
+    return Math.max(0, importeTotalNum - descuento);
+  }, [importeTotalNum, porcentajeTotalPensiones]);
+
   const descargarFormatoPensionados = async () => {
     setDescargandoPensionados(true);
     setError('');
@@ -445,7 +463,14 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
               <div><strong>Origen:</strong> {texto(leer(empleado, 'ORIGEN', 'origen'))}</div>
               <div><strong>Estatus del registro:</strong> {texto(leer(empleado, 'IDSTATUS', 'idstatus'))}</div>
               <div><strong>Pensiones:</strong> {texto(leer(empleado, 'PENSION', 'pension'), 'N/A')}</div>
-              <div><strong>Importe asignado:</strong> {moneda(leer(empleado, 'IMPORTE', 'importe'))}</div>
+              <div>
+                <strong>Importe asignado (Neto):</strong> {moneda(importeNetoEmpleado)}
+                {porcentajeTotalPensiones > 0 && (
+                  <span style={{ fontSize: '11px', color: '#666', display: 'block' }}>
+                    (Original: {moneda(importeTotalNum)} - {porcentajeTotalPensiones}% de pensión)
+                  </span>
+                )}
+              </div>
             </div>
 
             <div style={{ marginTop: 20 }}>
@@ -671,12 +696,12 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                           )}
                         </td>
 
-<td className="gestor-td">
-  {esCuentaInicial 
-    ? texto(observacionInicialActual !== '—' ? observacionInicialActual : leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
-    : texto(leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
-  }
-</td>
+                        <td className="gestor-td">
+                          {esCuentaInicial 
+                            ? texto(observacionInicialActual !== '—' ? observacionInicialActual : leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
+                            : texto(leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
+                          }
+                        </td>
 
                         <td className="gestor-td">
                           {fecha(leer(tarjeta, 'CREATED_AT', 'created_at'))}
