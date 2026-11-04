@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import { API_ENDPOINTS } from '../../config/api';
 import '../gestor/GestorView.css';
+import { SeccionDocumentosAnexos } from './SeccionDocumentosAnexos';
 
 interface TarjetasViewProps {
   idRegister: number | string;
@@ -28,7 +29,7 @@ const ESTATUS_TARJETA: Datos[] = [
   { idStatus: 4, status: 'Cancelada' },
 ];
 
-const leer = (objeto: Datos | null |undefined, ...claves: string[]): unknown => {
+const leer = (objeto: Datos | null | undefined, ...claves: string[]): unknown => {
   if (!objeto) return '';
 
   for (const clave of claves) {
@@ -140,7 +141,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     void cargarDatos();
   }, [cargarDatos]);
 
-  // Cálculo del importe neto descontando el porcentaje de las pensiones
+  // Cálculo del importe neto descontando el porcentaje de las pensiones[cite: 3]
   const importeTotalNum = useMemo(() => {
     const raw = leer(empleado, 'IMPORTE', 'importe');
     return Number(String(raw).replace(/[,$\s]/g, '')) || 0;
@@ -158,37 +159,39 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     return Math.max(0, importeTotalNum - descuento);
   }, [importeTotalNum, porcentajeTotalPensiones]);
 
-  const descargarFormatoPensionados = async () => {
+  // Función para descargar el formato Word por cada pensionado individual
+  const descargarFormatoPensionadoIndividual = async (idPension: string | number) => {
     setDescargandoPensionados(true);
     setError('');
 
     try {
       const response = await fetch(
-        `${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formatos-pensionados/${encodeURIComponent(String(idRegister))}`,
+        `${API_ENDPOINTS.MAIN}/gestor/vales/descargar-formato-pensionado/${encodeURIComponent(String(idRegister))}/${encodeURIComponent(String(idPension))}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-            Accept: 'application/pdf, application/json',
+            Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/json',
           },
         }
       );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'No se pudo generar el PDF de pensionados.');
+        throw new Error(errorData.message || 'No se pudo generar el documento Word del pensionado.');
       }
 
       const archivo = URL.createObjectURL(await response.blob());
       const enlace = document.createElement('a');
       const numeroEmpleado = texto(leer(empleado ?? undefined, 'NUMEMPLEADO', 'numempleado'), String(idRegister));
       enlace.href = archivo;
-      enlace.download = `pensionados_${numeroEmpleado}.pdf`;
+      enlace.download = `pensionado_${idPension}_${numeroEmpleado}.docx`; 
+      
       document.body.appendChild(enlace);
       enlace.click();
       enlace.remove();
       URL.revokeObjectURL(archivo);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error al descargar el PDF de pensionados.');
+      setError(e instanceof Error ? e.message : 'Error al descargar el documento del pensionado.');
     } finally {
       setDescargandoPensionados(false);
     }
@@ -472,15 +475,10 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                 )}
               </div>
             </div>
-
+            <SeccionDocumentosAnexos idRegister={idRegister} idTypeDocumentAnexo={1} />
             <div style={{ marginTop: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0 }}>{pensionadosDisponibles ? `Pensionados registrados (${pensionados.length})` : 'Pensionados registrados'}</h3>
-                {pensionadosDisponibles && pensionados.length > 0 && (
-                  <button type="button" className="btn-primary" onClick={() => void descargarFormatoPensionados()} disabled={descargandoPensionados}>
-                    {descargandoPensionados ? 'Generando PDF...' : '📄 Descargar PDF de pensionados'}
-                  </button>
-                )}
               </div>
               {!pensionadosDisponibles ? (
                 <p>El servicio de tarjetas no devolvió el detalle de pensionados. Actualiza o reinicia el backend.</p>
@@ -488,18 +486,39 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                 <div className="gestor-table-wrapper" style={{ marginTop: 12, overflowX: 'auto' }}>
                   <table className="gestor-table">
                     <thead>
-                      <tr><th>Nombre del pensionado</th><th>CURP</th><th>RFC</th><th>Cuenta</th><th>Porcentaje</th></tr>
+                      <tr>
+                        <th>Nombre del pensionado</th>
+                        <th>CURP</th>
+                        <th>RFC</th>
+                        <th>Cuenta</th>
+                        <th>Porcentaje</th>
+                        <th>Acciones</th>
+                      </tr>
                     </thead>
                     <tbody>
-                      {pensionados.map((pensionado, index) => (
-                        <tr key={String(leer(pensionado, 'idPension', 'idpension', 'IDPENSION') || index)}>
-                          <td className="gestor-td">{texto(leer(pensionado, 'nombrePensionado', 'nombrepensionado', 'NOMBREPENSIONADO'))}</td>
-                          <td className="gestor-td gestor-mono">{texto(leer(pensionado, 'curp', 'CURP'))}</td>
-                          <td className="gestor-td gestor-mono">{texto(leer(pensionado, 'rfc', 'RFC'))}</td>
-                          <td className="gestor-td">{texto(leer(pensionado, 'cuenta', 'CUENTA'))}</td>
-                          <td className="gestor-td">{texto(leer(pensionado, 'porcentaje', 'PORCENTAJE'))}%</td>
-                        </tr>
-                      ))}
+                      {pensionados.map((pensionado, index) => {
+                        const idPension = leer(pensionado, 'idPension', 'idpension', 'IDPENSION', 'id', 'ID') || index;
+                        return (
+                          <tr key={String(idPension)}>
+                            <td className="gestor-td">{texto(leer(pensionado, 'nombrePensionado', 'nombrepensionado', 'NOMBREPENSIONADO'))}</td>
+                            <td className="gestor-td gestor-mono">{texto(leer(pensionado, 'curp', 'CURP'))}</td>
+                            <td className="gestor-td gestor-mono">{texto(leer(pensionado, 'rfc', 'RFC'))}</td>
+                            <td className="gestor-td">{texto(leer(pensionado, 'cuenta', 'CUENTA'))}</td>
+                            <td className="gestor-td">{texto(leer(pensionado, 'porcentaje', 'PORCENTAJE'))}%</td>
+                            <td className="gestor-td-center">
+                              <button
+                                type="button"
+                                className="btn-primary"
+                                style={{ padding: '4px 8px', fontSize: '12px' }}
+                                onClick={() => void descargarFormatoPensionadoIndividual(idPension as string | number)}
+                                disabled={descargandoPensionados}
+                              >
+                                📄 Descargar Word
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -660,7 +679,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                                   onClick={() => void editarObservacionInicial()}
                                   disabled={guardando}
                                 >
-                                    🚨 Reportar Robo/Extravío
+                                  🚨 Reportar Robo/Extravío
                                 </button>
                               </div>
                             </div>
@@ -697,7 +716,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                         </td>
 
                         <td className="gestor-td">
-                          {esCuentaInicial 
+                          {esCuentaInicial
                             ? texto(observacionInicialActual !== '—' ? observacionInicialActual : leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
                             : texto(leer(tarjeta, 'observaciones', 'OBSERVACIONES'))
                           }

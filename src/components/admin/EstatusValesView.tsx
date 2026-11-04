@@ -3,6 +3,7 @@ import Swal from 'sweetalert2';
 import { API_ENDPOINTS, apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
 import { TarjetasView } from './TarjetasView';
+import { SeccionDocumentosAnexos } from './SeccionDocumentosAnexos';
 
 interface RegistroVale {
   idRegister?: number | string;
@@ -69,6 +70,10 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
   const [registroTarjetas, setRegistroTarjetas] =
     useState<RegistroVale | null>(null);
+    
+  // Estado para el modal de documentos anexos
+  const [modalDocsRegisterId, setModalDocsRegisterId] = useState<number | string | null>(null);
+
   const [filtros, setFiltros] = useState<Record<CampoFiltro, string>>({
     numero: '',
     nombre: '',
@@ -514,7 +519,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     fontSize: '12px',
   };
 
-if (registroTarjetas) {
+  if (registroTarjetas) {
     const idRegistroSeleccionado = obtenerId(registroTarjetas);
 
     if (idRegistroSeleccionado === undefined || idRegistroSeleccionado === null) {
@@ -529,7 +534,7 @@ if (registroTarjetas) {
       <TarjetasView
         idRegister={idRegistroSeleccionado}
         onVolver={() => setRegistroTarjetas(null)}
-        idType={idType} // <--- ¡Añade esta línea aquí!
+        idType={idType}
       />
     );
   }
@@ -759,6 +764,7 @@ if (registroTarjetas) {
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
                   <th style={{ textAlign: 'center' }}>Descargar formatos</th>
                   <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
+                  <th style={{ textAlign: 'center' }}>Documentos Anexos</th>
                   <th style={{ textAlign: 'center' }}>Tarjetas</th>
                 </tr>
 
@@ -812,6 +818,7 @@ if (registroTarjetas) {
                       <option value="cancelada">Cancelada</option>
                     </select>
                   </th>
+                  <th></th>
                   <th></th>
                   <th></th>
                   <th></th>
@@ -934,6 +941,18 @@ if (registroTarjetas) {
                         <button
                           type="button"
                           className="btn-primary"
+                          style={{ backgroundColor: '#0284c7', fontSize: '11px', padding: '5px 8px' }}
+                          onClick={() => setModalDocsRegisterId(idRegister ?? null)}
+                          disabled={idRegister === undefined || idRegister === null}
+                        >
+                          📁 Ver / Subir Anexos
+                        </button>
+                      </td>
+
+                      <td className="gestor-td-center">
+                        <button
+                          type="button"
+                          className="btn-primary"
                           onClick={() => setRegistroTarjetas(reg)}
                           disabled={idRegister === undefined || idRegister === null}
                         >
@@ -945,7 +964,7 @@ if (registroTarjetas) {
                 })}
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={idType === 1 ? 12 : 11} className="gestor-empty-row">
+                    <td colSpan={idType === 1 ? 13 : 12} className="gestor-empty-row">
                       No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>
@@ -1009,6 +1028,59 @@ if (registroTarjetas) {
                 disabled={pagina >= totalPaginas}
               >
                 Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para la Gestión de Documentos Anexos */}
+      {modalDocsRegisterId && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '8px',
+              padding: '20px',
+              maxWidth: '650px',
+              width: '90%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h2>Documentos Anexos (Registro #{modalDocsRegisterId})</h2>
+              <button
+                type="button"
+                onClick={() => setModalDocsRegisterId(null)}
+                style={{ border: 'none', background: 'none', fontSize: '18px', cursor: 'pointer' }}
+              >
+                ✖
+              </button>
+            </div>
+
+            <SeccionDocumentosAnexos idRegister={modalDocsRegisterId} idTypeDocumentAnexo={1} />
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => setModalDocsRegisterId(null)}
+              >
+                Cerrar
               </button>
             </div>
           </div>
