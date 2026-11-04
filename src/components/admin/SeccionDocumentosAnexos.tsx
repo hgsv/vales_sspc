@@ -4,8 +4,8 @@ import Swal from 'sweetalert2';
 
 interface SeccionDocumentosAnexosProps {
   idRegister: number | string;
-  idTypeDocumentAnexo?: number; // <-- Añadido para evitar el error de TypeScript
 }
+
 interface Documento {
   idDocument?: number | string;
   iddocument?: number | string;
@@ -27,11 +27,7 @@ interface TypeDocument {
   nametype?: string;
 }
 
-interface SeccionDocumentosAnexosProps {
-  idRegister: number | string;
-}
-
-export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: SeccionDocumentosAnexosProps) {
+export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosProps) {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [tiposDocumento, setTiposDocumento] = useState<TypeDocument[]>([]);
   const [idTypeDocumentSelected, setIdTypeDocumentSelected] = useState<string>('');
@@ -41,7 +37,6 @@ export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: Sec
 
   const token = localStorage.getItem('auth_token');
 
-  // Helpers robustos para tolerar cualquier variante de mayúsculas/minúsculas de Oracle
   const obtenerIdTipoCatalogo = (tipo: TypeDocument) =>
     String(tipo.idTypeDocument ?? tipo.IDTYPEDOCUMENT ?? tipo.idtypedocument ?? '');
 
@@ -54,7 +49,6 @@ export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: Sec
   const cargarDatos = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Obtener catálogo de tipos de documentos primero para tener la referencia de nombres
       const resTipos = await fetch(`${API_ENDPOINTS.MAIN}/gestor/tipos-documentos`, {
         headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       });
@@ -69,7 +63,6 @@ export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: Sec
         }
       }
 
-      // 2. Obtener documentos del registro
       const resDocs = await fetch(
         `${API_ENDPOINTS.MAIN}/gestor/documentos/registro/${idRegister}`,
         {
@@ -175,7 +168,6 @@ export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: Sec
     <div className="gestor-card" style={{ marginTop: '15px' }}>
       <h3>Documentos Anexos y Clasificación</h3>
 
-      {/* Controles de carga y selección de tipo */}
       <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
         <select
           value={idTypeDocumentSelected}
@@ -234,7 +226,6 @@ export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: Sec
         )}
       </div>
 
-      {/* Listado de Documentos */}
       {loading ? (
         <p>Cargando documentos anexos...</p>
       ) : documentos.length > 0 ? (
