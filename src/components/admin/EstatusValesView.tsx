@@ -1072,7 +1072,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
               </button>
             </div>
 
-            <SeccionDocumentosAnexos idRegister={modalDocsRegisterId} idTypeDocumentAnexo={1} />
+            <SeccionDocumentosAnexos idRegister={modalDocsRegisterId} />
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
               <button
