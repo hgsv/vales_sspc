@@ -1,7 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
+import { useCallback, useEffect, useState } from 'react';
 import { API_ENDPOINTS } from '../../config/api';
+import Swal from 'sweetalert2';
 
+interface SeccionDocumentosAnexosProps {
+  idRegister: number | string;
+  idTypeDocumentAnexo?: number; // <-- Añadido para evitar el error de TypeScript
+}
 interface Documento {
   idDocument?: number | string;
   iddocument?: number | string;
@@ -27,7 +31,7 @@ interface SeccionDocumentosAnexosProps {
   idRegister: number | string;
 }
 
-export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosProps) {
+export function SeccionDocumentosAnexos({ idRegister, idTypeDocumentAnexo }: SeccionDocumentosAnexosProps) {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [tiposDocumento, setTiposDocumento] = useState<TypeDocument[]>([]);
   const [idTypeDocumentSelected, setIdTypeDocumentSelected] = useState<string>('');

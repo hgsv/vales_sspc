@@ -141,7 +141,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     void cargarDatos();
   }, [cargarDatos]);
 
-  // Cálculo del importe neto descontando el porcentaje de las pensiones[cite: 3]
   const importeTotalNum = useMemo(() => {
     const raw = leer(empleado, 'IMPORTE', 'importe');
     return Number(String(raw).replace(/[,$\s]/g, '')) || 0;
@@ -475,7 +474,10 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                 )}
               </div>
             </div>
-            <SeccionDocumentosAnexos idRegister={idRegister} idTypeDocumentAnexo={1} />
+            
+            {/* Se corrige pasándole únicamente el idRegister */}
+            <SeccionDocumentosAnexos idRegister={idRegister} />
+
             <div style={{ marginTop: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0 }}>{pensionadosDisponibles ? `Pensionados registrados (${pensionados.length})` : 'Pensionados registrados'}</h3>
