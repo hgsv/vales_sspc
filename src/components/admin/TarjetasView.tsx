@@ -660,7 +660,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                           </tr>
                         </thead>
                         <tbody>
-                          {personasBeneficiarias.map((p, idx) => {
+                          {personasBeneficiarias.map((p) => {
                             const tipoObj = (p.typePerson as Datos) || {};
                             const nombreTipo = String(tipoObj.TypePerson || tipoObj.TYPEPERSON || tipoObj.typePerson || tipoObj.typeperson || 'Persona');
 
