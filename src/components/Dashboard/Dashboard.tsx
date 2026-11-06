@@ -126,24 +126,31 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Error al descargar el archivo de lineamientos.');
+        throw new Error(errorData.message || 'Error al cargar el archivo de lineamientos.');
       }
 
+      // Obtenemos el blob asegurándonos de que sea de tipo PDF
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const enlace = document.createElement('a');
-      enlace.href = url;
-      enlace.download = 'Lineamientos_medida_fin.pdf';
-      document.body.appendChild(enlace);
-      enlace.click();
-      enlace.remove();
-      window.URL.revokeObjectURL(url);
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+
+      // Creamos una URL temporal para el blob
+      const url = window.URL.createObjectURL(pdfBlob);
+
+      // Abrimos el PDF directamente en una nueva pestaña del navegador
+      window.open(url, '_blank');
+
+      // Liberamos la memoria del objeto URL después de un momento para que cargue bien
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 10000);
+
     } catch (error) {
       console.error('Error:', error);
-      alert(error instanceof Error ? error.message : 'No se pudo descargar el archivo.');
+      alert(error instanceof Error ? error.message : 'No se pudo abrir el archivo.');
     } finally {
       setDescargandoLineamientos(false);
     }
+
   };
 
   const fullName =

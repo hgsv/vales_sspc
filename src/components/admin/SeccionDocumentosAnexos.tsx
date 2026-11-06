@@ -130,6 +130,49 @@ export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumento
     }
   };
 
+const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
+    if (!urlDocumento) return;
+    
+    try {
+      const res = await fetch(urlDocumento, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/pdf, image/jpeg, image/png',
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error('No se pudo cargar el archivo para visualizar.');
+      }
+
+      const contentType = res.headers.get('content-type') || 'application/pdf';
+      const blob = await res.blob();
+      
+      // Creamos el blob asegurando el tipo correcto
+      const fileBlob = new Blob([blob], { type: contentType });
+      const blobUrl = window.URL.createObjectURL(fileBlob);
+      
+      // Creamos una etiqueta <a> invisible en memoria para forzar el comportamiento de pestaña nueva de forma limpia
+      const nuevaPestana = document.createElement('a');
+      nuevaPestana.href = blobUrl;
+      nuevaPestana.target = '_blank';
+      // NOTA: NO agregamos la propiedad 'download' aquí para evitar la descarga forzosa
+      
+      document.body.appendChild(nuevaPestana);
+      nuevaPestana.click();
+      nuevaPestana.remove();
+
+      // Limpieza de memoria temporal después de un momento
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 15000);
+
+    } catch (error) {
+      console.error('Error al visualizar:', error);
+      alert('Ocurrió un error al intentar abrir el documento.');
+    }
+  };
   const handleCambiarEstatusDocumento = async (idDocument: number | string, nuevoStatus: number) => {
     setProcesandoId(idDocument);
     try {
@@ -200,7 +243,6 @@ export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumento
     return tipo ? obtenerNombreTipoCatalogo(tipo) : `Tipo #${idType}`;
   };
 
-  // Determina si todos los documentos cargados tienen estatus 1 (aceptado)
   const todosAceptados = documentos.length > 0 && documentos.every((doc) => Number(doc.status ?? 0) === 1);
 
   return (
@@ -301,9 +343,24 @@ export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumento
                   <span style={{ fontWeight: 'bold', color: '#374151' }}>
                     [{obtenerNombreTipoPorId(idTipoDoc)}]
                   </span>
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline' }}>
-                    📄 Visualizar Archivo
-                  </a>
+                  
+                  {/* Botón para visualizar el documento de forma segura y directa en el navegador */}
+                  <button
+                    type="button"
+                    onClick={() => handleVisualizarDocumento(doc.url)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#0284c7',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                      padding: 0,
+                      font: 'inherit',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Visualizar Archivo
+                  </button>
 
                   <span
                     style={{
