@@ -343,7 +343,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
         throw new Error(result.message || 'No se pudo registrar la tarjeta.');
       }
 
-      setFolioCard('');
       setCuenta('');
       setObservaciones('');
       setIdStatus('1');
