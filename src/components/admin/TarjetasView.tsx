@@ -92,7 +92,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     rfc: '',
   });
 
-  const [folioCard, setFolioCard] = useState('');
   const [cuenta, setCuenta] = useState('');
   const [idStatus, setIdStatus] = useState('1');
   const [observaciones, setObservaciones] = useState('');
