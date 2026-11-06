@@ -31,13 +31,10 @@ const ESTATUS_TARJETA: Datos[] = [
 
 const leer = (objeto: Datos | null | undefined, ...claves: string[]): unknown => {
   if (!objeto) return '';
-
   for (const clave of claves) {
     const valor = objeto[clave];
-
     if (valor !== undefined && valor !== null) return valor;
   }
-
   return '';
 };
 
@@ -48,13 +45,10 @@ const texto = (valor: unknown, alternativo = '—'): string => {
 
 const moneda = (valor: unknown): string => {
   if (valor === undefined || valor === null || valor === '') return 'N/A';
-
   const numero = typeof valor === 'number'
     ? valor
     : Number(String(valor).replace(/[,$\s]/g, ''));
-
   if (!Number.isFinite(numero)) return String(valor);
-
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
@@ -64,12 +58,8 @@ const moneda = (valor: unknown): string => {
 
 const fecha = (valor: unknown): string => {
   if (!valor) return '—';
-
   const parsed = new Date(String(valor));
-
-  return Number.isNaN(parsed.getTime())
-    ? String(valor)
-    : parsed.toLocaleString();
+  return Number.isNaN(parsed.getTime()) ? String(valor) : parsed.toLocaleString();
 };
 
 const obtenerIdEstatus = (estatus: Datos): string =>
@@ -84,10 +74,23 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
   const [pensionados, setPensionados] = useState<Datos[]>([]);
   const [pensionadosDisponibles, setPensionadosDisponibles] = useState(false);
   const [descargandoPensionados, setDescargandoPensionados] = useState(false);
+  const [descargandoPersona, setDescargandoPersona] = useState(false);
   const [loading, setLoading] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [actualizandoId, setActualizandoId] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  // Estados para Personas Beneficiarias / Autorizadas y Tipos
+  const [personasBeneficiarias, setPersonasBeneficiarias] = useState<Datos[]>([]);
+  const [tiposPersona, setTiposPersona] = useState<Datos[]>([]);
+  const [formPersona, setFormPersona] = useState({
+    idTypePerson: '',
+    nomPerson: '',
+    appPerson: '',
+    apmPerson: '',
+    curp: '',
+    rfc: '',
+  });
 
   const [folioCard, setFolioCard] = useState('');
   const [cuenta, setCuenta] = useState('');
@@ -116,9 +119,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       const result = (await response.json()) as ApiResponse;
 
       if (!response.ok || !result.status || !result.data?.empleado) {
-        throw new Error(
-          result.message || 'No se pudo cargar el módulo de tarjetas.'
-        );
+        throw new Error(result.message || 'No se pudo cargar el módulo de tarjetas.');
       }
 
       setEmpleado(result.data.empleado);
@@ -127,19 +128,41 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       setTarjetas(result.data.tarjetas ?? []);
     } catch (e) {
       console.error('Error al cargar las tarjetas del empleado:', e);
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'Ocurrió un error al cargar la información.'
-      );
+      setError(e instanceof Error ? e.message : 'Ocurrió un error al cargar la información.');
     } finally {
       setLoading(false);
     }
   }, [idRegister]);
 
+  const cargarCatalogosPersonas = useCallback(async () => {
+    try {
+      const [resPersonas, resTipos] = await Promise.all([
+        fetch(`${API_ENDPOINTS.MAIN}/gestor/tarjetas/personas/${encodeURIComponent(String(idRegister))}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}`, Accept: 'application/json' },
+        }),
+        fetch(`${API_ENDPOINTS.MAIN}/gestor/tarjetas/tipos-persona`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}`, Accept: 'application/json' },
+        }),
+      ]);
+
+      const dataPersonas = await resPersonas.json();
+      const dataTipos = await resTipos.json();
+
+      if (dataPersonas.status) {
+        setPersonasBeneficiarias(Array.isArray(dataPersonas.data) ? dataPersonas.data : []);
+      }
+      if (dataTipos.status) {
+        setTiposPersona(Array.isArray(dataTipos.data) ? dataTipos.data : []);
+      }
+    } catch (e) {
+      console.error('Error al cargar datos de personas', e);
+    }
+  }, [idRegister]);
+
   useEffect(() => {
     void cargarDatos();
-  }, [cargarDatos]);
+    void cargarCatalogosPersonas();
+  }, [cargarDatos, cargarCatalogosPersonas]);
 
   const importeTotalNum = useMemo(() => {
     const raw = leer(empleado, 'IMPORTE', 'importe');
@@ -158,7 +181,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     return Math.max(0, importeTotalNum - descuento);
   }, [importeTotalNum, porcentajeTotalPensiones]);
 
-  // Función para descargar el formato Word por cada pensionado individual
   const descargarFormatoPensionadoIndividual = async (idPension: string | number) => {
     setDescargandoPensionados(true);
     setError('');
@@ -183,8 +205,8 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       const enlace = document.createElement('a');
       const numeroEmpleado = texto(leer(empleado ?? undefined, 'NUMEMPLEADO', 'numempleado'), String(idRegister));
       enlace.href = archivo;
-      enlace.download = `pensionado_${idPension}_${numeroEmpleado}.docx`; 
-      
+      enlace.download = `pensionado_${idPension}_${numeroEmpleado}.docx`;
+
       document.body.appendChild(enlace);
       enlace.click();
       enlace.remove();
@@ -193,6 +215,43 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       setError(e instanceof Error ? e.message : 'Error al descargar el documento del pensionado.');
     } finally {
       setDescargandoPensionados(false);
+    }
+  };
+
+  const descargarFormatoPersona = async (idPerson: string | number) => {
+    setDescargandoPersona(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `${API_ENDPOINTS.MAIN}/gestor/tarjetas/formato-persona/${encodeURIComponent(String(idRegister))}/${encodeURIComponent(String(idPerson))}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+            Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'No se pudo generar el formato.');
+      }
+
+      const archivo = URL.createObjectURL(await response.blob());
+      const enlace = document.createElement('a');
+      const numeroEmpleado = texto(leer(empleado ?? undefined, 'NUMEMPLEADO', 'numempleado'), String(idRegister));
+      enlace.href = archivo;
+      enlace.download = `formato_fallecimiento_${idPerson}_${numeroEmpleado}.docx`;
+
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      URL.revokeObjectURL(archivo);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al descargar el documento.');
+    } finally {
+      setDescargandoPersona(false);
     }
   };
 
@@ -210,8 +269,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     if (!cuentaInicial) return tarjetas;
 
     const cuentaInicialYaRegistrada = tarjetas.some(
-      (tarjeta) =>
-        String(leer(tarjeta, 'cuenta', 'CUENTA')) === cuentaInicial
+      (tarjeta) => String(leer(tarjeta, 'cuenta', 'CUENTA')) === cuentaInicial
     );
 
     if (cuentaInicialYaRegistrada) return tarjetas;
@@ -229,9 +287,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     return [cuentaInicialComoTarjeta, ...tarjetas];
   }, [cuentaInicial, empleado, idRegister, tarjetas, observacionInicialActual]);
 
-  const registrarReemplazo = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const registrarReemplazo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
@@ -242,7 +298,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     const notas = String(formulario.get('observaciones') ?? '').trim();
 
     const faltan: string[] = [];
-
     if (!folio) faltan.push('folio de tarjeta');
     if (!cuentaNueva) faltan.push('cuenta nueva');
     if (!estatus) faltan.push('estatus');
@@ -274,9 +329,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       const result = (await response.json()) as ApiResponse;
 
       if (!response.ok || !result.status) {
-        throw new Error(
-          result.message || 'No se pudo registrar la tarjeta.'
-        );
+        throw new Error(result.message || 'No se pudo registrar la tarjeta.');
       }
 
       setFolioCard('');
@@ -287,13 +340,47 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       await cargarDatos();
     } catch (e) {
       console.error('Error al registrar la tarjeta de reemplazo:', e);
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'Error al registrar la tarjeta.'
-      );
+      setError(e instanceof Error ? e.message : 'Error al registrar la tarjeta.');
     } finally {
       setGuardando(false);
+    }
+  };
+
+  const handleRegistrarPersona = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    try {
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/gestor/tarjetas/personas`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          idregister: idRegister,
+          ...formPersona,
+          idTypePerson: Number(formPersona.idTypePerson),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.status) {
+        await Swal.fire({
+          icon: 'success',
+          title: 'Registrado',
+          text: 'Persona registrada correctamente.',
+          confirmButtonColor: '#800020',
+        });
+        setFormPersona({ idTypePerson: '', nomPerson: '', appPerson: '', apmPerson: '', curp: '', rfc: '' });
+        await cargarCatalogosPersonas();
+      } else {
+        throw new Error(result.message || 'No se pudo registrar la persona.');
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al registrar la persona.');
     }
   };
 
@@ -349,19 +436,14 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     }
   };
 
-  const cambiarEstatus = async (
-    idCard: number | string,
-    nuevoEstatus: number
-  ) => {
+  const cambiarEstatus = async (idCard: number | string, nuevoEstatus: number) => {
     const clave = String(idCard);
     setActualizandoId(clave);
     setError('');
 
     try {
       const response = await fetch(
-        `${API_ENDPOINTS.MAIN}/gestor/tarjetas/${encodeURIComponent(
-          clave
-        )}/estatus`,
+        `${API_ENDPOINTS.MAIN}/gestor/tarjetas/${encodeURIComponent(clave)}/estatus`,
         {
           method: 'PATCH',
           headers: {
@@ -376,19 +458,13 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       const result = (await response.json()) as ApiResponse;
 
       if (!response.ok || !result.status) {
-        throw new Error(
-          result.message || 'No se pudo actualizar el estatus.'
-        );
+        throw new Error(result.message || 'No se pudo actualizar el estatus.');
       }
 
       await cargarDatos();
     } catch (e) {
       console.error('Error al actualizar el estatus de la tarjeta:', e);
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'Error al actualizar el estatus.'
-      );
+      setError(e instanceof Error ? e.message : 'Error al actualizar el estatus.');
     } finally {
       setActualizandoId(null);
     }
@@ -409,7 +485,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
         <div>
           <h2 className="gestor-title">Manejo de tarjetas</h2>
           <p className="gestor-subtitle">
-            Información del empleado, pensiones e historial de tarjetas.
+            Información del empleado, pensiones, personas beneficiarias/autorizadas e historial de tarjetas.
           </p>
         </div>
 
@@ -417,7 +493,10 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
           <button
             type="button"
             className="btn-primary"
-            onClick={() => void cargarDatos()}
+            onClick={() => {
+              void cargarDatos();
+              void cargarCatalogosPersonas();
+            }}
             disabled={loading}
           >
             🔄 Actualizar
@@ -474,11 +553,162 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                 )}
               </div>
             </div>
-            
-            {/* Se corrige pasándole únicamente el idRegister */}
+
             <SeccionDocumentosAnexos idRegister={idRegister} />
 
-            <div style={{ marginTop: 20 }}>
+            {/* SECCIÓN DE ALTA DE PERSONAS (Visible para idType === 1 o idType === 3) */}
+            {(idType === 1 || idType === 3) && (
+              <div style={{ marginTop: '25px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
+                <h3>Administración de Personas (Beneficiarias / Autorizadas)</h3>
+                <p style={{ fontSize: '13px', color: '#555', marginBottom: '15px' }}>
+                  Seleccione el tipo de persona e ingrese la información correspondiente.
+                </p>
+
+                <form onSubmit={handleRegistrarPersona}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label className="gestor-input-label">Tipo de Persona</label>
+                      <select
+                        className="gestor-text-input"
+                        value={formPersona.idTypePerson}
+                        onChange={(e) => setFormPersona({ ...formPersona, idTypePerson: e.target.value })}
+                        required
+                      >
+                        <option value="" disabled>Seleccione tipo</option>
+                        {tiposPersona.map((tipo) => {
+                          const idTp = leer(tipo, 'idTypePerson', 'IDTYPEPERSON', 'ID_TYPE_PERSON', 'id');
+                          const nomTp = String(leer(tipo, 'TypePerson', 'TYPEPERSON', 'TYPE_PERSON', 'typePerson') || 'Tipo');
+                          if (!idTp && idTp !== 0) return null;
+                          return (
+                            <option key={String(idTp)} value={String(idTp)}>
+                              {nomTp}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="gestor-input-label">Nombre(s)</label>
+                      <input
+                        type="text"
+                        className="gestor-text-input"
+                        value={formPersona.nomPerson}
+                        onChange={(e) => setFormPersona({ ...formPersona, nomPerson: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="gestor-input-label">Apellido Paterno</label>
+                      <input
+                        type="text"
+                        className="gestor-text-input"
+                        value={formPersona.appPerson}
+                        onChange={(e) => setFormPersona({ ...formPersona, appPerson: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="gestor-input-label">Apellido Materno</label>
+                      <input
+                        type="text"
+                        className="gestor-text-input"
+                        value={formPersona.apmPerson}
+                        onChange={(e) => setFormPersona({ ...formPersona, apmPerson: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="gestor-input-label">CURP</label>
+                      <input
+                        type="text"
+                        maxLength={18}
+                        className="gestor-text-input"
+                        value={formPersona.curp}
+                        onChange={(e) => setFormPersona({ ...formPersona, curp: e.target.value.toUpperCase() })}
+                      />
+                    </div>
+                    <div>
+                      <label className="gestor-input-label">RFC</label>
+                      <input
+                        type="text"
+                        maxLength={13}
+                        className="gestor-text-input"
+                        value={formPersona.rfc}
+                        onChange={(e) => setFormPersona({ ...formPersona, rfc: e.target.value.toUpperCase() })}
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="btn-primary" style={{ marginTop: '15px', backgroundColor: '#16a34a', borderColor: '#16a34a' }}>
+                    ✅ Guardar Persona
+                  </button>
+                </form>
+
+                {/* Listado de Personas Registradas */}
+                <div style={{ marginTop: '20px' }}>
+                  <h4>Personas registradas ({personasBeneficiarias.length})</h4>
+                  {personasBeneficiarias.length > 0 ? (
+                    <div className="gestor-table-wrapper" style={{ marginTop: '10px' }}>
+                      <table className="gestor-table">
+                        <thead>
+                          <tr>
+                            <th>Tipo de Persona</th>
+                            <th>Nombre Completo</th>
+                            <th>CURP</th>
+                            <th>RFC</th>
+                            <th style={{ textAlign: 'center' }}>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {personasBeneficiarias.map((p, idx) => {
+                            const tipoObj = (p.typePerson as Datos) || {};
+                            const nombreTipo = String(tipoObj.TypePerson || tipoObj.TYPEPERSON || tipoObj.typePerson || tipoObj.typeperson || 'Persona');
+
+                            const nombre = String(p.nomPerson || '');
+                            const app = String(p.appPerson || '');
+                            const apm = String(p.apmPerson || '');
+                            const curpVal = String(p.curp || '');
+                            const rfcVal = String(p.rfc || '');
+                            // Reemplaza esta línea en el .map():
+                            const idPer = String(leer(p, 'idPerson', 'IDPERSON', 'idperson') || '');
+
+                            const nombreCompleto = `${nombre} ${app} ${apm}`.trim();
+
+                            return (
+                              <tr key={idPer}>
+                                <td className="gestor-td">
+                                  <span style={{ fontWeight: 'bold', color: '#0284c7' }}>{nombreTipo}</span>
+                                </td>
+                                <td className="gestor-td">
+                                  {nombreCompleto !== '' ? nombreCompleto : '—'}
+                                </td>
+                                <td className="gestor-td gestor-mono">{texto(curpVal)}</td>
+                                <td className="gestor-td gestor-mono">{texto(rfcVal)}</td>
+                                <td className="gestor-td-center">
+                                  <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#0284c7' }}
+                                    onClick={() => void descargarFormatoPersona(idPer)}
+                                    disabled={descargandoPersona}
+                                  >
+                                    📄 Descargar Formato
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>No hay personas dadas de alta.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div style={{ marginTop: 25 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0 }}>{pensionadosDisponibles ? `Pensionados registrados (${pensionados.length})` : 'Pensionados registrados'}</h3>
               </div>
@@ -530,7 +760,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
             </div>
           </div>
 
-          {/* Sección de reemplazo restringida exclusivamente a idType === 1 */}
           {idType === 1 && (
             <div className="gestor-card">
               <h3>Registrar tarjeta de reemplazo</h3>
@@ -586,7 +815,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                     >
                       {opcionesEstatus.map((estatus, index) => {
                         const estatusId = obtenerIdEstatus(estatus);
-
                         return (
                           <option key={estatusId || index} value={estatusId}>
                             {obtenerNombreEstatus(estatus)}
@@ -689,9 +917,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                             <select
                               aria-label={`Cambiar estatus de tarjeta ${String(idCard)}`}
                               value={estatusActual}
-                              disabled={
-                                !idCard || actualizandoId === String(idCard)
-                              }
+                              disabled={!idCard || actualizandoId === String(idCard)}
                               onChange={(e) => {
                                 if (idCard) {
                                   void cambiarEstatus(
@@ -703,7 +929,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                             >
                               {opcionesEstatus.map((estatus, indexEstatus) => {
                                 const estatusId = obtenerIdEstatus(estatus);
-
                                 return (
                                   <option
                                     key={estatusId || indexEstatus}
