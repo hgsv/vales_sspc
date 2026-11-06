@@ -568,7 +568,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
               </div>
             </div>
 
-            <SeccionDocumentosAnexos idRegister={idRegister} />
+            <SeccionDocumentosAnexos idRegister={idRegister} idType={idType}/>
 
             {/* SECCIÓN DE ALTA Y GESTIÓN DE PERSONAS (Visible para idType === 1 o idType === 3) */}
             {(idType === 1 || idType === 3) && (

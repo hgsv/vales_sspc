@@ -4,6 +4,7 @@ import Swal from 'sweetalert2';
 
 interface SeccionDocumentosAnexosProps {
   idRegister: number | string;
+  idType?: number | null;
 }
 
 interface Documento {
@@ -15,6 +16,7 @@ interface Documento {
   IDTYPEDOCUMENT?: number | string;
   idtypedocument?: number | string;
   idRegister?: number | string;
+  status?: number | string;
   url?: string;
 }
 
@@ -27,12 +29,13 @@ interface TypeDocument {
   nametype?: string;
 }
 
-export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosProps) {
+export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumentosAnexosProps) {
   const [documentos, setDocumentos] = useState<Documento[]>([]);
   const [tiposDocumento, setTiposDocumento] = useState<TypeDocument[]>([]);
   const [idTypeDocumentSelected, setIdTypeDocumentSelected] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [procesandoId, setProcesandoId] = useState<number | string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const token = localStorage.getItem('auth_token');
@@ -127,6 +130,39 @@ export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosP
     }
   };
 
+  const handleCambiarEstatusDocumento = async (idDocument: number | string, nuevoStatus: number) => {
+    setProcesandoId(idDocument);
+    try {
+      const res = await fetch(`${API_ENDPOINTS.MAIN}/admin/documentos/${idDocument}/estatus`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ status: nuevoStatus }),
+      });
+      const data = await res.json();
+      if (res.ok && data.status) {
+        setDocumentos((prev) =>
+          prev.map((d) => {
+            const currentId = String(d.idDocument ?? d.iddocument ?? d.IDDOCUMENT);
+            if (currentId === String(idDocument)) {
+              return { ...d, status: nuevoStatus };
+            }
+            return d;
+          })
+        );
+      } else {
+        alert(data.message || 'No se pudo actualizar el estatus del documento.');
+      }
+    } catch (err) {
+      console.error('Error al actualizar estatus:', err);
+    } finally {
+      setProcesandoId(null);
+    }
+  };
+
   const handleEliminarDocumento = async (idDocument: number | string | undefined) => {
     if (!idDocument) return;
 
@@ -164,67 +200,77 @@ export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosP
     return tipo ? obtenerNombreTipoCatalogo(tipo) : `Tipo #${idType}`;
   };
 
+  // Determina si todos los documentos cargados tienen estatus 1 (aceptado)
+  const todosAceptados = documentos.length > 0 && documentos.every((doc) => Number(doc.status ?? 0) === 1);
+
   return (
     <div className="gestor-card" style={{ marginTop: '15px' }}>
       <h3>Documentos Anexos y Clasificación</h3>
 
-      <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
-        <select
-          value={idTypeDocumentSelected}
-          onChange={(e) => setIdTypeDocumentSelected(e.target.value)}
-          className="gestor-text-input"
-          style={{ maxWidth: '220px' }}
-        >
-          {tiposDocumento.map((tipo, idx) => {
-            const idVal = obtenerIdTipoCatalogo(tipo);
-            const nombreVal = obtenerNombreTipoCatalogo(tipo);
-            return (
-              <option key={idVal || idx} value={idVal}>
-                {nombreVal}
-              </option>
-            );
-          })}
-        </select>
+      {/* Ocultar input/selector de carga si todos los documentos están aceptados */}
+      {!todosAceptados ? (
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
+          <select
+            value={idTypeDocumentSelected}
+            onChange={(e) => setIdTypeDocumentSelected(e.target.value)}
+            className="gestor-text-input"
+            style={{ maxWidth: '220px' }}
+          >
+            {tiposDocumento.map((tipo, idx) => {
+              const idVal = obtenerIdTipoCatalogo(tipo);
+              const nombreVal = obtenerNombreTipoCatalogo(tipo);
+              return (
+                <option key={idVal || idx} value={idVal}>
+                  {nombreVal}
+                </option>
+              );
+            })}
+          </select>
 
-        <input
-          type="file"
-          id={`input-file-${idRegister}`}
-          accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-          style={{ display: 'none' }}
-        />
+          <input
+            type="file"
+            id={`input-file-${idRegister}`}
+            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+            onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+            style={{ display: 'none' }}
+          />
 
-        <label
-          htmlFor={`input-file-${idRegister}`}
-          className="btn-primary"
-          style={{ cursor: 'pointer', backgroundColor: '#0284c7', margin: 0, padding: '8px 14px' }}
-        >
-          📁 Seleccionar Archivo
-        </label>
+          <label
+            htmlFor={`input-file-${idRegister}`}
+            className="btn-primary"
+            style={{ cursor: 'pointer', backgroundColor: '#0284c7', margin: 0, padding: '8px 14px' }}
+          >
+            📁 Seleccionar Archivo
+          </label>
 
-        {selectedFile && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f3f4f6', padding: '6px 10px', borderRadius: '6px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 500 }}>{selectedFile.name}</span>
-            <button
-              type="button"
-              onClick={handleSubirDocumento}
-              disabled={subiendo}
-              className="btn-primary"
-              style={{ backgroundColor: '#16a34a', border: 'none', padding: '4px 10px', fontSize: '12px' }}
-            >
-              {subiendo ? 'Guardando...' : '✅ Subir Anexo'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedFile(null)}
-              style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}
-              title="Eliminar archivo antes de definirlo"
-            >
-              🗑️ Cancelar
-            </button>
-          </div>
-        )}
-      </div>
+          {selectedFile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#f3f4f6', padding: '6px 10px', borderRadius: '6px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 500 }}>{selectedFile.name}</span>
+              <button
+                type="button"
+                onClick={handleSubirDocumento}
+                disabled={subiendo}
+                className="btn-primary"
+                style={{ backgroundColor: '#16a34a', border: 'none', padding: '4px 10px', fontSize: '12px' }}
+              >
+                {subiendo ? 'Guardando...' : '✅ Subir Anexo'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedFile(null)}
+                style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}
+                title="Cancelar"
+              >
+                🗑️ Cancelar
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold' }}>
+          ✅ Todos los documentos anexos han sido aceptados. Ya no es posible cargar más archivos.
+        </div>
+      )}
 
       {loading ? (
         <p>Cargando documentos anexos...</p>
@@ -233,6 +279,9 @@ export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosP
           {documentos.map((doc, index) => {
             const docId = doc.idDocument ?? doc.iddocument ?? doc.IDDOCUMENT ?? index;
             const idTipoDoc = obtenerIdTipoDeDoc(doc);
+            const statusDoc = Number(doc.status ?? 0);
+            const esAceptado = statusDoc === 1;
+
             return (
               <div
                 key={String(docId)}
@@ -240,27 +289,87 @@ export function SeccionDocumentosAnexos({ idRegister }: SeccionDocumentosAnexosP
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  padding: '8px 12px',
+                  padding: '10px 14px',
                   border: '1px solid #e5e7eb',
                   borderRadius: '6px',
                   backgroundColor: '#fff',
+                  flexWrap: 'wrap',
+                  gap: '10px',
                 }}
               >
-                <div>
-                  <span style={{ fontWeight: 'bold', color: '#374151', marginRight: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 'bold', color: '#374151' }}>
                     [{obtenerNombreTipoPorId(idTipoDoc)}]
                   </span>
                   <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ color: '#0284c7', textDecoration: 'underline' }}>
                     📄 Visualizar Archivo
                   </a>
+
+                  <span
+                    style={{
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      backgroundColor: esAceptado ? '#dcfce7' : '#fee2e2',
+                      color: esAceptado ? '#166534' : '#991b1b',
+                    }}
+                  >
+                    {esAceptado ? 'Aceptado (1)' : 'Pendiente / No aceptado (0)'}
+                  </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleEliminarDocumento(docId)}
-                  style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '12px' }}
-                >
-                  🗑️ Eliminar
-                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {idType === 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleCambiarEstatusDocumento(docId, 1)}
+                        disabled={procesandoId === docId || esAceptado}
+                        style={{
+                          backgroundColor: '#16a34a',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        Aceptar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCambiarEstatusDocumento(docId, 0)}
+                        disabled={procesandoId === docId || !esAceptado}
+                        style={{
+                          backgroundColor: '#ca8a04',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '4px',
+                          padding: '4px 8px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        Rechazar
+                      </button>
+                    </>
+                  )}
+
+                  {/* Ocultar el botón de eliminar si el documento ya está aceptado */}
+                  {!esAceptado && (
+                    <button
+                      type="button"
+                      onClick={() => handleEliminarDocumento(docId)}
+                      style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: 'bold' }}
+                    >
+                      🗑️ Eliminar
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}
