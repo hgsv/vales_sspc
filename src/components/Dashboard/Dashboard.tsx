@@ -27,7 +27,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
   const [roleName, setRoleName] = useState('Usuario');
   const [activeTab, setActiveTab] = useState('vales');
-
+  const [descargandoLineamientos, setDescargandoLineamientos] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -112,6 +112,40 @@ export function Dashboard({ onLogout }: DashboardProps) {
     fetchUserData();
   }, [onLogout]);
 
+  const descargarLineamientos = async () => {
+    setDescargandoLineamientos(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${API_ENDPOINTS.MAIN}/lineamientos/descargar`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/pdf, application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al descargar el archivo de lineamientos.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = 'Lineamientos_medida_fin.pdf';
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error:', error);
+      alert(error instanceof Error ? error.message : 'No se pudo descargar el archivo.');
+    } finally {
+      setDescargandoLineamientos(false);
+    }
+  };
+
   const fullName =
     `${user.firstName} ${user.lastName} ${user.middleName}`.trim();
 
@@ -152,7 +186,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
               </button>
             )}
 
-            {user.idType != 2 && (
+            {user.idType !== 2 && (
               <button
                 className={`${styles.navItem} ${activeTab === 'control-vales' ? styles.active : ''
                   }`}
@@ -193,13 +227,34 @@ export function Dashboard({ onLogout }: DashboardProps) {
         <header className={styles.topHeader}>
           <h1>HOLA, {loadingUser ? '...' : user.firstName}</h1>
 
-          <div className={styles.headerBadges}>
+          <div className={styles.headerBadges} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {user.unidad && (
               <span className={styles.unitBadge}>Unidad: {user.unidad}</span>
             )}
             {user.nivel && (
               <span className={styles.levelBadge}>Nivel: {user.nivel}</span>
             )}
+            <button
+              type="button"
+              onClick={descargarLineamientos}
+              disabled={descargandoLineamientos}
+              style={{
+                backgroundColor: '#248d50',
+                color: '#ffffff',
+                border: 'none',
+                padding: '8px 14px',
+                borderRadius: '20px',
+                fontSize: '18px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              {descargandoLineamientos ? 'Descargando...' : 'Consultar Lineamientos'}
+            </button>
           </div>
         </header>
 
@@ -208,13 +263,11 @@ export function Dashboard({ onLogout }: DashboardProps) {
             <GestorView origenUsuario={user.origen} />
           )}
 
-          {activeTab === 'control-vales' && user.idType != 2 && (
+          {activeTab === 'control-vales' && user.idType !== 2 && (
             <EstatusValesView idType={user.idType} />
           )}
 
-          {activeTab === 'reportes' && (
-            <ReportsView />
-          )}
+          {activeTab === 'reportes' && <ReportsView />}
 
           {activeTab === 'usuarios' && user.idType === 1 && <UsersView />}
         </section>

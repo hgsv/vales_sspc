@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import * as XLSX from 'xlsx';
 import { apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
 
@@ -85,6 +84,7 @@ export function ReportsView() {
   const [origen, setOrigen] = useState('');
   const [cargandoAnios, setCargandoAnios] = useState(true);
   const [cargandoReporte, setCargandoReporte] = useState(false);
+  const [descargandoExcel, setDescargandoExcel] = useState(false);
   const [error, setError] = useState('');
 
   const [pagina, setPagina] = useState(1);
@@ -110,7 +110,6 @@ export function ReportsView() {
   const opcionesEnlace = opcionesFiltro('IDENLACE');
   const tieneColumnaOrigen = columnas.some((c) => c.key.toUpperCase() === 'ORIGEN');
 
-  // Filtrar columnas visibles según corresponda a GN
   const columnasVisibles = useMemo(() => {
     if (origen === 'GN') return columnas;
     const keysExclusivasGN = ['PUESTO', 'UBICACION', 'CLAVE', 'MODALIDAD'];
@@ -209,24 +208,46 @@ export function ReportsView() {
     void cargarReporte();
   }, [cargarReporte]);
 
-  const exportarExcel = () => {
-    if (registrosFiltrados.length === 0 || columnasVisibles.length === 0) return;
+  const exportarExcel = async () => {
+    if (registrosFiltrados.length === 0) return;
 
-    const filasExcel = [
-      columnasVisibles.map((columna) => columna.label),
-      ...registrosFiltrados.map((registro) =>
-        columnasVisibles.map((columna) => obtenerValorMostrado(registro, columna.key))
-      ),
-    ];
+    setDescargandoExcel(true);
+    try {
+      const params = new URLSearchParams({
+        anio: anioSeleccionado,
+        ...(filtros.enlace && { enlace: filtros.enlace }),
+        ...(filtros.estatus && { estatus: filtros.estatus }),
+        ...(filtros.origen && { origen: filtros.origen }),
+        ...(filtros.ur && { ur: filtros.ur }),
+      });
 
-    const hoja = XLSX.utils.aoa_to_sheet(filasExcel);
-    hoja['!cols'] = columnasVisibles.map((columna) => ({
-      wch: Math.min(Math.max(columna.label.length + 4, 16), 32),
-    }));
+      const response = await fetch(`${apiUrl('admin/reportes/exportar-excel')}?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token()}`,
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+        },
+      });
 
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, 'Registros');
-    XLSX.writeFile(libro, `reporte_${origen || 'registros'}_${anioSeleccionado}.xlsx`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Error al exportar el archivo Excel.');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `reporte_empleados_${origen || 'registros'}_${anioSeleccionado}.xlsx`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al exportar Excel.');
+    } finally {
+      setDescargandoExcel(false);
+    }
   };
 
   const origenLabel = origen === 'TODOS' ? 'todos los orígenes' : origen === 'SC' ? 'Sector Central (SSPC)' : 'Guardia Nacional';
@@ -366,10 +387,10 @@ export function ReportsView() {
             type="button"
             className="btn-success"
             onClick={exportarExcel}
-            disabled={cargandoReporte || registrosFiltrados.length === 0}
+            disabled={cargandoReporte || descargandoExcel || registrosFiltrados.length === 0}
             style={{ marginTop: 0 }}
           >
-            Exportar Excel ({registrosFiltrados.length})
+            {descargandoExcel ? 'Generando Excel...' : `Exportar Excel (${registrosFiltrados.length})`}
           </button>
         </div>
       </div>

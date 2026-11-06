@@ -181,6 +181,50 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
     return Math.max(0, importeTotalNum - descuento);
   }, [importeTotalNum, porcentajeTotalPensiones]);
 
+  const cuentaInicial = texto(
+    leer(empleado ?? undefined, 'CUENTAINICIAL', 'cuentainicial'),
+    ''
+  );
+
+  const observacionInicialActual = texto(
+    leer(empleado ?? undefined, 'OBSERVACIONINICIAL', 'observacioninicial', 'ObservacionInicial'),
+    ''
+  );
+
+  // Obtención de la cuenta activa o vigente para formatos e impresiones
+  const cuentaVigente = useMemo(() => {
+    if (tarjetas.length > 0) {
+      const ultimaTarjeta = tarjetas[0];
+      const cuentaTarjeta = texto(leer(ultimaTarjeta, 'cuenta', 'CUENTA'), '');
+      if (cuentaTarjeta && cuentaTarjeta !== '—') {
+        return cuentaTarjeta;
+      }
+    }
+    return cuentaInicial !== '' ? cuentaInicial : 'N/A';
+  }, [tarjetas, cuentaInicial]);
+
+  const tarjetasVisibles = useMemo(() => {
+    if (!cuentaInicial) return tarjetas;
+
+    const cuentaInicialYaRegistrada = tarjetas.some(
+      (tarjeta) => String(leer(tarjeta, 'cuenta', 'CUENTA')) === cuentaInicial
+    );
+
+    if (cuentaInicialYaRegistrada) return tarjetas;
+
+    const cuentaInicialComoTarjeta: Datos = {
+      idCard: `inicial-${idRegister}`,
+      cuenta: cuentaInicial,
+      folioCard: '',
+      status: 'Cuenta inicial',
+      observaciones: observacionInicialActual !== '—' ? observacionInicialActual : 'Cuenta inicial del registro del empleado',
+      CREATED_AT: leer(empleado ?? undefined, 'CREATED_AT', 'created_at'),
+      esCuentaInicial: true,
+    };
+
+    return [cuentaInicialComoTarjeta, ...tarjetas];
+  }, [cuentaInicial, empleado, idRegister, tarjetas, observacionInicialActual]);
+
   const descargarFormatoPensionadoIndividual = async (idPension: string | number) => {
     setDescargandoPensionados(true);
     setError('');
@@ -254,38 +298,6 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       setDescargandoPersona(false);
     }
   };
-
-  const cuentaInicial = texto(
-    leer(empleado ?? undefined, 'CUENTAINICIAL', 'cuentainicial'),
-    ''
-  );
-
-  const observacionInicialActual = texto(
-    leer(empleado ?? undefined, 'OBSERVACIONINICIAL', 'observacioninicial', 'ObservacionInicial'),
-    ''
-  );
-
-  const tarjetasVisibles = useMemo(() => {
-    if (!cuentaInicial) return tarjetas;
-
-    const cuentaInicialYaRegistrada = tarjetas.some(
-      (tarjeta) => String(leer(tarjeta, 'cuenta', 'CUENTA')) === cuentaInicial
-    );
-
-    if (cuentaInicialYaRegistrada) return tarjetas;
-
-    const cuentaInicialComoTarjeta: Datos = {
-      idCard: `inicial-${idRegister}`,
-      cuenta: cuentaInicial,
-      folioCard: '',
-      status: 'Cuenta inicial',
-      observaciones: observacionInicialActual !== '—' ? observacionInicialActual : 'Cuenta inicial del registro del empleado',
-      CREATED_AT: leer(empleado ?? undefined, 'CREATED_AT', 'created_at'),
-      esCuentaInicial: true,
-    };
-
-    return [cuentaInicialComoTarjeta, ...tarjetas];
-  }, [cuentaInicial, empleado, idRegister, tarjetas, observacionInicialActual]);
 
   const registrarReemplazo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -541,6 +553,10 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
               <div><strong>Nivel:</strong> {texto(leer(empleado, 'NIVEL', 'nivel'))}</div>
               <div><strong>Enlace:</strong> {texto(leer(empleado, 'IDENLACE', 'idenlace'))}</div>
               <div><strong>Cuenta inicial:</strong> {texto(cuentaInicial)}</div>
+              <div>
+                <strong>Cuenta vigente (para formatos):</strong>{' '}
+                <span style={{ fontWeight: 'bold', color: '#0284c7' }}>{cuentaVigente}</span>
+              </div>
               <div><strong>Origen:</strong> {texto(leer(empleado, 'ORIGEN', 'origen'))}</div>
               <div><strong>Estatus del registro:</strong> {texto(leer(empleado, 'IDSTATUS', 'idstatus'))}</div>
               <div><strong>Pensiones:</strong> {texto(leer(empleado, 'PENSION', 'pension'), 'N/A')}</div>
@@ -556,7 +572,7 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
 
             <SeccionDocumentosAnexos idRegister={idRegister} />
 
-            {/* SECCIÓN DE ALTA DE PERSONAS (Visible para idType === 1 o idType === 3) */}
+            {/* SECCIÓN DE ALTA Y GESTIÓN DE PERSONAS (Visible para idType === 1 o idType === 3) */}
             {(idType === 1 || idType === 3) && (
               <div style={{ marginTop: '25px', borderTop: '1px solid #e5e7eb', paddingTop: '20px' }}>
                 <h3>Administración de Personas (Beneficiarias / Autorizadas)</h3>
@@ -660,22 +676,25 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                           </tr>
                         </thead>
                         <tbody>
-                          {personasBeneficiarias.map((p, idx) => {
+                          {personasBeneficiarias.map((p) => {
                             const tipoObj = (p.typePerson as Datos) || {};
-                            const nombreTipo = String(tipoObj.TypePerson || tipoObj.TYPEPERSON || tipoObj.typePerson || tipoObj.typeperson || 'Persona');
+                            const nombreTipo = String(
+                              leer(tipoObj, 'TypePerson', 'TYPEPERSON', 'typePerson', 'typeperson') ||
+                              leer(p, 'TypePerson', 'TYPEPERSON', 'typePerson', 'typeperson') ||
+                              'Persona'
+                            );
 
-                            const nombre = String(p.nomPerson || '');
-                            const app = String(p.appPerson || '');
-                            const apm = String(p.apmPerson || '');
-                            const curpVal = String(p.curp || '');
-                            const rfcVal = String(p.rfc || '');
-                            // Reemplaza esta línea en el .map():
+                            const nombre = String(leer(p, 'nomPerson', 'NOMPERSON', 'nomperson') || '');
+                            const app = String(leer(p, 'appPerson', 'APPPERSON', 'appperson') || '');
+                            const apm = String(leer(p, 'apmPerson', 'APMPERSON', 'apmperson') || '');
+                            const curpVal = String(leer(p, 'curp', 'CURP') || '');
+                            const rfcVal = String(leer(p, 'rfc', 'RFC') || '');
                             const idPer = String(leer(p, 'idPerson', 'IDPERSON', 'idperson') || '');
 
                             const nombreCompleto = `${nombre} ${app} ${apm}`.trim();
 
                             return (
-                              <tr key={idPer}>
+                              <tr key={idPer || Math.random()}>
                                 <td className="gestor-td">
                                   <span style={{ fontWeight: 'bold', color: '#0284c7' }}>{nombreTipo}</span>
                                 </td>
@@ -689,7 +708,13 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                                     type="button"
                                     className="btn-primary"
                                     style={{ padding: '4px 8px', fontSize: '12px', backgroundColor: '#0284c7' }}
-                                    onClick={() => void descargarFormatoPersona(idPer)}
+                                    onClick={() => {
+                                      if (idPer && idPer !== '0') {
+                                        void descargarFormatoPersona(idPer);
+                                      } else {
+                                        void Swal.fire('Error', 'El ID de la persona no es válido.', 'error');
+                                      }
+                                    }}
                                     disabled={descargandoPersona}
                                   >
                                     📄 Descargar Formato
@@ -781,9 +806,9 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
                       id="folioCard"
                       name="folioCard"
                       className="gestor-text-input"
-                      value={folioCard}
-                      onChange={(e) => setFolioCard(e.target.value)}
-                      required
+                      value={cuentaVigente}
+                      readOnly
+                      style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
                     />
                   </div>
 
@@ -984,4 +1009,4 @@ export function TarjetasView({ idRegister, onVolver, idType }: TarjetasViewProps
       ) : null}
     </div>
   );
-}
+} 
