@@ -145,25 +145,21 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
       if (!res.ok) {
         throw new Error('No se pudo cargar el archivo para visualizar.');
       }
-
+      
       const contentType = res.headers.get('content-type') || 'application/pdf';
       const blob = await res.blob();
       
-      // Creamos el blob asegurando el tipo correcto
       const fileBlob = new Blob([blob], { type: contentType });
       const blobUrl = window.URL.createObjectURL(fileBlob);
       
-      // Creamos una etiqueta <a> invisible en memoria para forzar el comportamiento de pestaña nueva de forma limpia
       const nuevaPestana = document.createElement('a');
       nuevaPestana.href = blobUrl;
       nuevaPestana.target = '_blank';
-      // NOTA: NO agregamos la propiedad 'download' aquí para evitar la descarga forzosa
       
       document.body.appendChild(nuevaPestana);
       nuevaPestana.click();
       nuevaPestana.remove();
 
-      // Limpieza de memoria temporal después de un momento
       setTimeout(() => {
         window.URL.revokeObjectURL(blobUrl);
       }, 15000);
