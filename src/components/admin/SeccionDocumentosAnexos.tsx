@@ -37,6 +37,7 @@ export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumento
   const [subiendo, setSubiendo] = useState(false);
   const [procesandoId, setProcesandoId] = useState<number | string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [visualizandoId, setVisualizandoId] = useState<number | string | null>(null);
 
   const token = localStorage.getItem('auth_token');
 
@@ -130,35 +131,34 @@ export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumento
     }
   };
 
-const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
-    if (!urlDocumento) return;
-    
+  // Método seguro basado en Blob para abrir el archivo en pestaña nueva sin interferir con React Router
+  const handleVisualizarDocumento = async (urlDocumento: string | undefined, docId: number | string) => {
+    if (!urlDocumento) {
+      alert('No hay una URL válida para este documento.');
+      return;
+    }
+
+    setVisualizandoId(docId);
     try {
-      const res = await fetch(urlDocumento, {
+      const response = await fetch(urlDocumento, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          Accept: 'application/pdf, image/jpeg, image/png',
+          Accept: 'application/pdf, application/json, image/jpeg, image/png',
         },
       });
 
-      if (!res.ok) {
-        throw new Error('No se pudo cargar el archivo para visualizar.');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'No se pudo cargar el archivo para visualizar.');
       }
-      
-      const contentType = res.headers.get('content-type') || 'application/pdf';
-      const blob = await res.blob();
-      
+
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || 'application/pdf';
       const fileBlob = new Blob([blob], { type: contentType });
+      
       const blobUrl = window.URL.createObjectURL(fileBlob);
-      
-      const nuevaPestana = document.createElement('a');
-      nuevaPestana.href = blobUrl;
-      nuevaPestana.target = '_blank';
-      
-      document.body.appendChild(nuevaPestana);
-      nuevaPestana.click();
-      nuevaPestana.remove();
+      window.open(blobUrl, '_blank');
 
       setTimeout(() => {
         window.URL.revokeObjectURL(blobUrl);
@@ -167,8 +167,11 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
     } catch (error) {
       console.error('Error al visualizar:', error);
       alert('Ocurrió un error al intentar abrir el documento.');
+    } finally {
+      setVisualizandoId(null);
     }
   };
+
   const handleCambiarEstatusDocumento = async (idDocument: number | string, nuevoStatus: number) => {
     setProcesandoId(idDocument);
     try {
@@ -245,7 +248,6 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
     <div className="gestor-card" style={{ marginTop: '15px' }}>
       <h3>Documentos Anexos y Clasificación</h3>
 
-      {/* Ocultar input/selector de carga si todos los documentos están aceptados */}
       {!todosAceptados ? (
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
           <select
@@ -319,6 +321,7 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
             const idTipoDoc = obtenerIdTipoDeDoc(doc);
             const statusDoc = Number(doc.status ?? 0);
             const esAceptado = statusDoc === 1;
+            const estaAbriendo = visualizandoId === docId;
 
             return (
               <div
@@ -340,10 +343,10 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
                     [{obtenerNombreTipoPorId(idTipoDoc)}]
                   </span>
                   
-                  {/* Botón para visualizar el documento de forma segura y directa en el navegador */}
                   <button
                     type="button"
-                    onClick={() => handleVisualizarDocumento(doc.url)}
+                    onClick={() => handleVisualizarDocumento(doc.url, docId)}
+                    disabled={estaAbriendo}
                     style={{
                       background: 'none',
                       border: 'none',
@@ -355,7 +358,7 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
                       fontWeight: 500,
                     }}
                   >
-                    Visualizar Archivo
+                    {estaAbriendo ? 'Cargando...' : 'Visualizar Archivo'}
                   </button>
 
                   <span
@@ -412,7 +415,6 @@ const handleVisualizarDocumento = async (urlDocumento: string | undefined) => {
                     </>
                   )}
 
-                  {/* Ocultar el botón de eliminar si el documento ya está aceptado */}
                   {!esAceptado && (
                     <button
                       type="button"
