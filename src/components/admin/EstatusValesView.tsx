@@ -21,6 +21,10 @@ interface RegistroVale {
   idstatus?: number | string;
   IDSTATUS?: number | string;
 
+  fechaEntrega?: string;
+  fechaentrega?: string;
+  FECHAENTREGA?: string;
+
   NOMBRECOMPLETO?: string;
   nombrecompleto?: string;
   nombreCompleto?: string;
@@ -102,6 +106,9 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
   const obtenerEstatus = (reg: RegistroVale) =>
     Number(reg.idStatus ?? reg.idstatus ?? reg.IDSTATUS);
+
+  const obtenerFechaEntrega = (reg: RegistroVale) =>
+    reg.fechaEntrega ?? reg.fechaentrega ?? reg.FECHAENTREGA ?? '';
 
   const obtenerNombreEstatus = (estatus: number) => {
     switch (estatus) {
@@ -290,6 +297,24 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     idRegister: number | string,
     nuevoEstatus: number
   ) => {
+    // Si selecciona "Entregada" (estatus 2), pedimos confirmación con SweetAlert2
+    if (nuevoEstatus === 2) {
+      const confirmacion = await Swal.fire({
+        title: '¿Confirmar entrega de tarjeta?',
+        text: 'Se registrará la fecha y hora actual como momento de la entrega.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#16a34a',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, confirmar entrega',
+        cancelButtonText: 'Cancelar',
+      });
+
+      if (!confirmacion.isConfirmed) {
+        return; // Si cancela, no hacemos nada
+      }
+    }
+
     const token = localStorage.getItem('auth_token');
 
     try {
@@ -312,13 +337,29 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       const data = await response.json();
 
       if (response.ok && data.status) {
+        // Obtenemos la fecha de entrega del backend o generamos una local si el servidor la devuelve en data
+        const fechaActualizada = data.fechaEntrega ?? (nuevoEstatus === 2 ? new Date().toISOString() : null);
+
         setRegistros((prev) =>
           prev.map((reg) =>
             String(obtenerId(reg)) === String(idRegister)
-              ? { ...reg, idStatus: nuevoEstatus }
+              ? { 
+                  ...reg, 
+                  idStatus: nuevoEstatus, 
+                  fechaEntrega: nuevoEstatus === 2 ? (fechaActualizada || reg.fechaEntrega) : reg.fechaEntrega 
+                }
               : reg
           )
         );
+
+        if (nuevoEstatus === 2) {
+          await Swal.fire({
+            icon: 'success',
+            title: '¡Entrega registrada!',
+            text: 'La tarjeta ha sido marcada como entregada y se guardó la fecha/hora.',
+            confirmButtonColor: '#800020',
+          });
+        }
       } else {
         alert(data.message || 'Error al actualizar el estatus.');
       }
@@ -763,6 +804,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   <th>Pensiones</th>
                   <th>Importe</th>
                   <th style={{ textAlign: 'center' }}>Estatus Actual</th>
+                  <th style={{ textAlign: 'center' }}>Fecha Entrega</th>
                   <th style={{ textAlign: 'center' }}>Descargar formatos</th>
                   <th style={{ textAlign: 'center' }}>Asignar Estatus</th>
                   <th style={{ textAlign: 'center' }}>Documentos Anexos</th>
@@ -821,6 +863,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   <th></th>
                   <th></th>
                   <th></th>
+                  <th></th>
                 </tr>
               </thead>
 
@@ -834,6 +877,16 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   const enlace = obtenerEnlace(reg);
                   const cuenta = obtenerCuenta(reg);
                   const pension = obtenerPension(reg);
+                  const fechaEntregaRaw = obtenerFechaEntrega(reg);
+                  
+                  // Formatear la fecha de entrega si existe
+                  const fechaEntregaFormateada = fechaEntregaRaw 
+                    ? new Date(fechaEntregaRaw).toLocaleString('es-MX', {
+                        dateStyle: 'short',
+                        timeStyle: 'medium',
+                      })
+                    : '-';
+
                   const importeRaw = obtenerImporte(reg);
                   const importeFormateado =
                     importeRaw !== '' && importeRaw !== null && !Number.isNaN(Number(importeRaw))
@@ -896,6 +949,10 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                         >
                           {nombreEstatus}
                         </span>
+                      </td>
+
+                      <td className="gestor-td-center" style={{ fontSize: '12px' }}>
+                        {fechaEntregaFormateada}
                       </td>
 
                       <td className="gestor-td-center">
@@ -972,7 +1029,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                 })}
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={idType === 1 ? 13 : 12} className="gestor-empty-row">
+                    <td colSpan={idType === 1 ? 14 : 13} className="gestor-empty-row">
                       No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>
