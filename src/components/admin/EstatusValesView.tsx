@@ -5,6 +5,13 @@ import '../gestor/GestorView.css';
 import { TarjetasView } from './TarjetasView';
 import { SeccionDocumentosAnexos } from './SeccionDocumentosAnexos';
 
+interface Documento {
+  idDocument?: number | string;
+  document: string;
+  status?: number | null;
+  [key: string]: any;
+}
+
 interface RegistroVale {
   idRegister?: number | string;
   idregister?: number | string;
@@ -52,6 +59,8 @@ interface RegistroVale {
   importe?: string | number | null;
   IMPORTE?: string | number | null;
   Importe?: string | number | null;
+
+  documentos?: Documento[];
 }
 
 type CampoFiltro = 'numero' | 'nombre' | 'cuenta' | 'estatus';
@@ -319,7 +328,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     }
   };
 
-  // Manejador para Tarjetas con Importe
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -386,7 +394,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     }
   };
 
-  // Manejador para Pensiones
   const handleFileChangePensiones = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -555,11 +562,8 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           <h2 className="gestor-title">Control y Entrega de Tarjetas</h2>
         </div>
 
-        {/* Solo visible para usuarios con idType === 1 */}
         {idType === 1 && (
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center', flexWrap: 'wrap' }}>
-
-            {/* --- CARGAR TARJETAS E IMPORTE --- */}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <input
                 type="number"
@@ -622,7 +626,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
               )}
             </div>
 
-            {/* --- CARGAR PENSIONES --- */}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <label
                 htmlFor="upload-pensiones-input"
@@ -673,7 +676,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                 </button>
               )}
             </div>
-
           </div>
         )}
       </div>
@@ -754,7 +756,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   <th>Núm. Emp</th>
                   <th>Nombre Completo</th>
 
-                  {/* Ocultar la columna Enlace si idType es 3 */}
                   {idType !== 3 && <th>Enlace</th>}
 
                   {idType === 1 && <th>Origen del registro</th>}
@@ -789,9 +790,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                     />
                   </th>
 
-                  {/* Celda vacía correspondiente al filtro de Enlace si idType NO es 3 */}
                   {idType !== 3 && <th></th>}
-
                   {idType === 1 && <th></th>}
                   <th>
                     <input
@@ -841,6 +840,12 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                       ? Number(importeRaw).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
                       : importeRaw || '-';
 
+                  // Validación de documentos de la fila actual
+                  const documentosAsociados = reg.documentos || [];
+                  const todosArchivosValidados =
+                    documentosAsociados.length > 0 &&
+                    documentosAsociados.every((doc) => Number(doc.status) === 1);
+
                   const colorEstatus =
                     estatusActual === 2
                       ? { backgroundColor: '#d4edda', color: '#155724' }
@@ -870,7 +875,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                       <td className="gestor-td gestor-num-emp">{numEmp}</td>
                       <td className="gestor-td">{nombreCompleto}</td>
 
-                      {/* Ocultar la celda Enlace si idType es 3 */}
                       {idType !== 3 && <td className="gestor-td">{enlace || '-'}</td>}
 
                       {idType === 1 && (
@@ -925,7 +929,11 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                               void handleCambiarEstatus(idRegister, Number(e.target.value));
                             }
                           }}
-                          disabled={idRegister === undefined || idRegister === null}
+                          disabled={
+                            idRegister === undefined ||
+                            idRegister === null ||
+                            todosArchivosValidados
+                          }
                         >
                           <option value="" disabled>
                             Selecciona estatus
@@ -1034,7 +1042,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
         </div>
       )}
 
-      {/* Modal para la Gestión de Documentos Anexos */}
       {modalDocsRegisterId && (
         <div
           style={{
