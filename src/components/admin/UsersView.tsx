@@ -312,7 +312,7 @@ function SeccionActasUsuario({ idUser }: { idUser: number | string }) {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {documentos.map((doc, index) => {
                         const docId = doc.idDocument ?? doc.iddocument ?? doc.IDDOCUMENT ?? doc.id_acta ?? index;
-                        const idTipoDoc = doc.id_typeacta ?? (doc as any).ID_TYPEACTA ?? 1;
+                        const idTipoDoc = doc.id_typeActa ?? (doc as any).ID_TYPEACTA ?? 1;
 
                         return (
                             <div
