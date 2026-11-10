@@ -4,7 +4,7 @@ import { API_ENDPOINTS } from '../../config/api';
 
 interface TarjetaRow {
   cuenta: string;
-  folio: string;
+  folioCard: string;
 }
 
 export function CardsView() {
@@ -29,7 +29,7 @@ export function CardsView() {
 
     const token = localStorage.getItem('auth_token');
     const formData = new FormData();
-    formData.append('file', file); // Asegúrate de que el nombre coincida con tu backend (ej. 'file', 'excel', etc.)
+    formData.append('file', file); 
 
     setLoading(true);
     setMensaje(null);
@@ -39,7 +39,6 @@ export function CardsView() {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-          // Nota: No incluyas 'Content-Type' cuando envíes FormData, el navegador lo configura automáticamente con el boundary
         },
         body: formData
       });
@@ -50,7 +49,7 @@ export function CardsView() {
         throw new Error(data.message || 'Error al registrar las tarjetas.');
       }
 
-      setMensaje({ tipo: 'success', texto: '¡Tarjetas cargadas y registradas exitosamente!' });
+      setMensaje({ tipo: 'success', texto: data.message || '¡Tarjetas cargadas y registradas exitosamente!' });
       if (data.tarjetas) {
         setPreviewData(data.tarjetas);
       }
@@ -65,7 +64,6 @@ export function CardsView() {
     <div className="cards-container">
       <div className="cards-header">
         <h2 className="cards-title">Gestión de Tarjetas</h2>
-        <p className="cards-subtitle">Carga masiva mediante archivo Excel (Campos requeridos: CUENTA y FOLIO)</p>
       </div>
 
       {mensaje && (
@@ -100,6 +98,9 @@ export function CardsView() {
 
       {previewData.length > 0 && (
         <div className="cards-table-card">
+          <div className="cards-table-header">
+            <h3>Resumen de Tarjetas Registradas ({previewData.length})</h3>
+          </div>
           <div className="cards-table-wrapper">
             <table className="cards-table">
               <thead>
@@ -114,7 +115,7 @@ export function CardsView() {
                   <tr key={index} className={index % 2 === 0 ? 'cards-tr-even' : 'cards-tr-odd'}>
                     <td className="cards-td">{index + 1}</td>
                     <td className="cards-td cards-mono">{item.cuenta}</td>
-                    <td className="cards-td cards-mono">{item.folio}</td>
+                    <td className="cards-td cards-mono">{item.folioCard || 'N/A'}</td>
                   </tr>
                 ))}
               </tbody>

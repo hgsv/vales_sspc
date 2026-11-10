@@ -23,6 +23,8 @@ interface FiltrosReporte {
   estatus: string;
   origen: string;
   ur: string;
+  fechaInicio: string;
+  fechaFin: string;
 }
 
 const obtenerValor = (fila: FilaReporte, key: string) => {
@@ -70,7 +72,7 @@ const obtenerValorMostrado = (fila: FilaReporte, key: string) => {
     if (origenRegistro === 'SC') return 'Sector Central (SSPC)';
     if (origenRegistro === 'GN') return 'Guardia Nacional';
   }
-  if (upperKey === 'CREATED_AT') {
+  if (upperKey === 'CREATED_AT' || upperKey === 'FECHAENTREGA') {
     return formatearFecha(valor);
   }
   return valor !== null && valor !== undefined && String(valor).trim() !== '' ? String(valor) : 'N/A';
@@ -94,6 +96,8 @@ export function ReportsView() {
     estatus: '',
     origen: '',
     ur: '',
+    fechaInicio: '',
+    fechaFin: '',
   });
 
   const token = () => localStorage.getItem('auth_token');
@@ -111,17 +115,44 @@ export function ReportsView() {
   const tieneColumnaOrigen = columnas.some((c) => c.key.toUpperCase() === 'ORIGEN');
 
   const columnasVisibles = useMemo(() => {
-    if (origen === 'GN') return columnas;
-    const keysExclusivasGN = ['PUESTO', 'UBICACION', 'CLAVE', 'MODALIDAD'];
-    return columnas.filter((col) => !keysExclusivasGN.includes(col.key.toUpperCase()));
+    let cols = columnas;
+    if (origen !== 'GN') {
+      const keysExclusivasGN = ['PUESTO', 'UBICACION', 'CLAVE', 'MODALIDAD'];
+      cols = columnas.filter((col) => !keysExclusivasGN.includes(col.key.toUpperCase()));
+    }
+    const tieneFechaEntrega = cols.some((c) => c.key.toUpperCase() === 'FECHAENTREGA');
+    if (!tieneFechaEntrega) {
+      cols = [...cols, { key: 'FECHAENTREGA', label: 'Fecha de entrega' }];
+    }
+    return cols;
   }, [columnas, origen]);
 
-  const registrosFiltrados = registros.filter((registro) =>
-    (!filtros.enlace || String(obtenerValor(registro, 'IDENLACE')).trim() === filtros.enlace) &&
-    (!filtros.estatus || String(obtenerValor(registro, 'IDSTATUS')).trim() === filtros.estatus) &&
-    (!filtros.origen || String(obtenerValor(registro, 'ORIGEN')).trim().toUpperCase() === filtros.origen) &&
-    (!filtros.ur || String(obtenerValor(registro, 'UR')).trim() === filtros.ur)
-  );
+  const registrosFiltrados = registros.filter((registro) => {
+    const cumpleEnlace = !filtros.enlace || String(obtenerValor(registro, 'IDENLACE')).trim() === filtros.enlace;
+    const cumpleEstatus = !filtros.estatus || String(obtenerValor(registro, 'IDSTATUS')).trim() === filtros.estatus;
+    const cumpleOrigen = !filtros.origen || String(obtenerValor(registro, 'ORIGEN')).trim().toUpperCase() === filtros.origen;
+    const cumpleUr = !filtros.ur || String(obtenerValor(registro, 'UR')).trim() === filtros.ur;
+
+    let cumpleFecha = true;
+    const fechaEntregaVal = obtenerValor(registro, 'FECHAENTREGA');
+    if (filtros.fechaInicio || filtros.fechaFin) {
+      if (!fechaEntregaVal) {
+        cumpleFecha = false;
+      } else {
+        const fechaEntrega = new Date(String(fechaEntregaVal)).setHours(0, 0, 0, 0);
+        if (filtros.fechaInicio) {
+          const inicio = new Date(filtros.fechaInicio).setHours(0, 0, 0, 0);
+          if (fechaEntrega < inicio) cumpleFecha = false;
+        }
+        if (filtros.fechaFin) {
+          const fin = new Date(filtros.fechaFin).setHours(0, 0, 0, 0);
+          if (fechaEntrega > fin) cumpleFecha = false;
+        }
+      }
+    }
+
+    return cumpleEnlace && cumpleEstatus && cumpleOrigen && cumpleUr && cumpleFecha;
+  });
 
   const totalPaginas = Math.max(1, Math.ceil(registrosFiltrados.length / porPagina));
   const inicio = (pagina - 1) * porPagina;
@@ -173,7 +204,11 @@ export function ReportsView() {
     setError('');
 
     try {
-      const params = new URLSearchParams({ anio: anioSeleccionado });
+      const params = new URLSearchParams({ 
+        anio: anioSeleccionado,
+        ...(filtros.fechaInicio && { fecha_inicio: filtros.fechaInicio }),
+        ...(filtros.fechaFin && { fecha_fin: filtros.fechaFin }),
+      });
       const response = await fetch(
         `${apiUrl('admin/reportes/registros')}?${params.toString()}`,
         {
@@ -192,7 +227,6 @@ export function ReportsView() {
       setOrigen(data.origen ?? '');
       setColumnas(data.columnas ?? []);
       setRegistros(data.data ?? []);
-      setFiltros({ enlace: '', estatus: '', origen: '', ur: '' });
       setPagina(1);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar el reporte.');
@@ -202,7 +236,7 @@ export function ReportsView() {
     } finally {
       setCargandoReporte(false);
     }
-  }, [anioSeleccionado]);
+  }, [anioSeleccionado, filtros.fechaInicio, filtros.fechaFin]);
 
   useEffect(() => {
     void cargarReporte();
@@ -219,6 +253,8 @@ export function ReportsView() {
         ...(filtros.estatus && { estatus: filtros.estatus }),
         ...(filtros.origen && { origen: filtros.origen }),
         ...(filtros.ur && { ur: filtros.ur }),
+        ...(filtros.fechaInicio && { fecha_inicio: filtros.fechaInicio }),
+        ...(filtros.fechaFin && { fecha_fin: filtros.fechaFin }),
       });
 
       const response = await fetch(`${apiUrl('admin/reportes/exportar-excel')}?${params.toString()}`, {
@@ -281,7 +317,7 @@ export function ReportsView() {
               value={anioSeleccionado}
               onChange={(event) => {
                 setAnioSeleccionado(event.target.value);
-                setFiltros({ enlace: '', estatus: '', origen: '', ur: '' });
+                setFiltros({ enlace: '', estatus: '', origen: '', ur: '', fechaInicio: '', fechaFin: '' });
                 setPagina(1);
               }}
               disabled={cargandoAnios || anios.length === 0}
@@ -392,6 +428,47 @@ export function ReportsView() {
           >
             {descargandoExcel ? 'Generando Excel...' : `Exportar Excel (${registrosFiltrados.length})`}
           </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <label className="gestor-input-label" htmlFor="reporte-fecha-inicio">FECHA INICIO (ENTREGA)</label>
+            <input
+              id="reporte-fecha-inicio"
+              type="date"
+              className="gestor-text-input"
+              value={filtros.fechaInicio}
+              onClick={(e) => {
+                if (typeof (e.target as HTMLInputElement).showPicker === 'function') {
+                  (e.target as HTMLInputElement).showPicker();
+                }
+              }}
+              onChange={(event) => {
+                setFiltros((actual) => ({ ...actual, fechaInicio: event.target.value }));
+                setPagina(1);
+              }}
+              disabled={cargandoReporte}
+            />
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <label className="gestor-input-label" htmlFor="reporte-fecha-fin">FECHA FIN (ENTREGA)</label>
+            <input
+              id="reporte-fecha-fin"
+              type="date"
+              className="gestor-text-input"
+              value={filtros.fechaFin}
+              onClick={(e) => {
+                if (typeof (e.target as HTMLInputElement).showPicker === 'function') {
+                  (e.target as HTMLInputElement).showPicker();
+                }
+              }}
+              onChange={(event) => {
+                setFiltros((actual) => ({ ...actual, fechaFin: event.target.value }));
+                setPagina(1);
+              }}
+              disabled={cargandoReporte}
+            />
+          </div>
         </div>
       </div>
 

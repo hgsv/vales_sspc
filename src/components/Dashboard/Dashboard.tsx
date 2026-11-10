@@ -5,6 +5,7 @@ import { GestorView } from '../gestor/gestorView';
 import { EstatusValesView } from '../admin/EstatusValesView';
 import { UsersView } from '../admin/UsersView';
 import { ReportsView } from '../admin/ReportsView';
+import { CardsView } from '../tarjetas/CardsView';
 
 import TexturaRoja from '../../images/textura-roja.png';
 import TexturaClara from '../../images/textura-roja2.png';
@@ -129,17 +130,12 @@ export function Dashboard({ onLogout }: DashboardProps) {
         throw new Error(errorData.message || 'Error al cargar el archivo de lineamientos.');
       }
 
-      // Obtenemos el blob asegurándonos de que sea de tipo PDF
       const blob = await response.blob();
       const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-
-      // Creamos una URL temporal para el blob
       const url = window.URL.createObjectURL(pdfBlob);
 
-      // Abrimos el PDF directamente en una nueva pestaña del navegador
       window.open(url, '_blank');
 
-      // Liberamos la memoria del objeto URL después de un momento para que cargue bien
       setTimeout(() => {
         window.URL.revokeObjectURL(url);
       }, 10000);
@@ -150,7 +146,6 @@ export function Dashboard({ onLogout }: DashboardProps) {
     } finally {
       setDescargandoLineamientos(false);
     }
-
   };
 
   const fullName =
@@ -185,8 +180,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
           <nav className={styles.navMenu}>
             {user.idType === 2 && (
               <button
-                className={`${styles.navItem} ${activeTab === 'vales' ? styles.active : ''
-                  }`}
+                className={`${styles.navItem} ${activeTab === 'vales' ? styles.active : ''}`}
                 onClick={() => setActiveTab('vales')}
               >
                 Selección de personal autorizado
@@ -195,17 +189,25 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
             {user.idType !== 2 && (
               <button
-                className={`${styles.navItem} ${activeTab === 'control-vales' ? styles.active : ''
-                  }`}
+                className={`${styles.navItem} ${activeTab === 'control-vales' ? styles.active : ''}`}
                 onClick={() => setActiveTab('control-vales')}
               >
                 Control y Estatus
               </button>
             )}
 
+            {/* Restringido únicamente para Administradores (idType === 1) */}
+            {user.idType === 1 && (
+              <button
+                className={`${styles.navItem} ${activeTab === 'tarjetas' ? styles.active : ''}`}
+                onClick={() => setActiveTab('tarjetas')}
+              >
+                Tarjetas
+              </button>
+            )}
+
             <button
-              className={`${styles.navItem} ${activeTab === 'reportes' ? styles.active : ''
-                }`}
+              className={`${styles.navItem} ${activeTab === 'reportes' ? styles.active : ''}`}
               onClick={() => setActiveTab('reportes')}
             >
               Reportes
@@ -213,8 +215,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
 
             {user.idType === 1 && (
               <button
-                className={`${styles.navItem} ${activeTab === 'usuarios' ? styles.active : ''
-                  }`}
+                className={`${styles.navItem} ${activeTab === 'usuarios' ? styles.active : ''}`}
                 onClick={() => setActiveTab('usuarios')}
               >
                 Usuarios
@@ -273,6 +274,8 @@ export function Dashboard({ onLogout }: DashboardProps) {
           {activeTab === 'control-vales' && user.idType !== 2 && (
             <EstatusValesView idType={user.idType} />
           )}
+
+          {activeTab === 'tarjetas' && user.idType === 1 && <CardsView />}
 
           {activeTab === 'reportes' && <ReportsView />}
 
