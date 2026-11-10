@@ -1,8 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { API_ENDPOINTS, apiUrl } from '../../config/api';
-import Swal from 'sweetalert2';
+import React, { useEffect, useMemo, useState } from 'react';
+import { apiUrl } from '../../config/api';
 import '../gestor/GestorView.css';
-import { SeccionActasUsuario } from './SeccionActasUsuario'; // Asegúrate de verificar la ruta correcta de importación
+import { SeccionActasUsuario } from './SeccionActasUsuario';
 
 type Origen = 'secretaría' | 'guardia';
 
