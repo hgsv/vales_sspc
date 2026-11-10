@@ -6,54 +6,88 @@ interface SeccionActasUsuarioProps {
     idUser: number | string;
 }
 
+interface TypeActa {
+    id_typeActa?: number | string;
+    id_typeacta?: number | string;
+    ID_TYPEACTA?: number | string;
+    nameType?: string;
+    nametype?: string;
+    NAMETYPE?: string;
+}
+
 interface DocumentoUsuario {
     idDocument?: number | string;
     iddocument?: number | string;
     IDDOCUMENT?: number | string;
-    document?: string;
-    idTypeDocument?: number | string;
-    IDTYPEDOCUMENT?: number | string;
-    status?: number | string;
+    id_acta?: number | string;
+    acta?: string;
+    id_typeActa?: number | string;
     url?: string;
 }
 
 export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
     const [documentos, setDocumentos] = useState<DocumentoUsuario[]>([]);
+    const [tiposActa, setTiposActa] = useState<TypeActa[]>([]);
+    const [idTypeActaSelected, setIdTypeActaSelected] = useState<string>('');
     const [loading, setLoading] = useState(false);
     const [subiendo, setSubiendo] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [nombreDocumento, setNombreDocumento] = useState('Acta Administrativa / Documento');
+    const [visualizandoId, setVisualizandoId] = useState<number | string | null>(null);
 
     const token = localStorage.getItem('auth_token');
 
-    const cargarDocumentos = useCallback(async () => {
+    const obtenerIdTipoActa = (tipo: TypeActa) =>
+        String(tipo.id_typeActa ?? tipo.id_typeacta ?? tipo.ID_TYPEACTA ?? '');
+
+    const obtenerNombreTipoActa = (tipo: TypeActa) =>
+        String(tipo.nameType ?? tipo.nametype ?? tipo.NAMETYPE ?? 'Sin nombre');
+
+    const cargarDatosActas = useCallback(async () => {
         if (!idUser) return;
         setLoading(true);
         try {
-            const res = await fetch(`${API_ENDPOINTS.MAIN}/admin/users/${idUser}/documentos`, {
+            const resTipos = await fetch(`${API_ENDPOINTS.MAIN}/admin/tipos-actas`, {
                 headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
             });
-            const data = await res.json();
-            if (res.ok && data.status) {
-                setDocumentos(data.data || []);
+            const dataTipos = await resTipos.json();
+            if (resTipos.ok && dataTipos.status) {
+                const lista = dataTipos.data || [];
+                setTiposActa(lista);
+                if (lista.length > 0 && !idTypeActaSelected) {
+                    setIdTypeActaSelected(obtenerIdTipoActa(lista[0]));
+                }
+            }
+
+            const resDocs = await fetch(`${API_ENDPOINTS.MAIN}/admin/users/${idUser}/documentos`, {
+                headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+            });
+            const dataDocs = await resDocs.json();
+            if (resDocs.ok && dataDocs.status) {
+                setDocumentos(dataDocs.data || []);
             }
         } catch (err) {
             console.error('Error al cargar actas del usuario:', err);
         } finally {
             setLoading(false);
         }
-    }, [idUser, token]);
+    }, [idUser, token, idTypeActaSelected]);
 
     useEffect(() => {
-        void cargarDocumentos();
-    }, [cargarDocumentos]);
+        void cargarDatosActas();
+    }, [cargarDatosActas]);
 
     const handleSubirActa = async () => {
         if (!selectedFile) return;
 
+        const idTipoInt = Number(idTypeActaSelected);
+        if (!idTypeActaSelected || !Number.isInteger(idTipoInt) || idTipoInt <= 0) {
+            alert('Por favor selecciona un tipo de acta válido.');
+            return;
+        }
+
         const formData = new FormData();
         formData.append('id_user', String(idUser));
-        formData.append('nombre_documento', nombreDocumento);
+        formData.append('id_typeActa', String(idTipoInt));
         formData.append('archivo', selectedFile);
 
         setSubiendo(true);
@@ -69,12 +103,11 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
                 await Swal.fire({
                     icon: 'success',
                     title: 'Éxito',
-                    text: 'Acta cargada correctamente.',
+                    text: 'Acta clasificada y cargada correctamente.',
                     confirmButtonColor: '#800020',
                 });
                 setSelectedFile(null);
-                setNombreDocumento('Acta Administrativa / Documento');
-                await cargarDocumentos();
+                await cargarDatosActas();
             } else {
                 alert(data.message || 'Error al subir el acta.');
             }
@@ -86,9 +119,57 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
         }
     };
 
-    const handleVisualizarActa = (url: string | undefined) => {
-        if (!url) return;
-        window.open(url, '_blank');
+    const handleVisualizarActa = async (urlActa: string | undefined, actaId: number | string) => {
+        if (!urlActa) {
+            alert('No hay una URL válida para esta acta.');
+            return;
+        }
+
+        let rutaLimpia = urlActa.replace(/^\/api/, '');
+
+        const urlCompleta = rutaLimpia.startsWith('http')
+            ? rutaLimpia
+            : `${API_ENDPOINTS.MAIN}${rutaLimpia.startsWith('/') ? '' : '/'}${rutaLimpia}`;
+
+        console.log('🔍 URL generada para el fetch corregida:', urlCompleta);
+
+        setVisualizandoId(actaId);
+        try {
+            const response = await fetch(urlCompleta, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: 'application/pdf, application/json, image/jpeg, image/png',
+                },
+            });
+
+            if (!response.ok) {
+                alert(`Error del servidor (${response.status}): Token inválido o expirado.`);
+                return;
+            }
+
+            const contentType = response.headers.get('content-type') || 'application/pdf';
+
+            if (contentType.includes('text/html')) {
+                alert('El servidor devolvió una página HTML. El token no fue autorizado.');
+                return;
+            }
+
+            const blob = await response.blob();
+            const fileBlob = new Blob([blob], { type: contentType });
+            const blobUrl = window.URL.createObjectURL(fileBlob);
+            window.open(blobUrl, '_blank');
+
+            setTimeout(() => {
+                window.URL.revokeObjectURL(blobUrl);
+            }, 15000);
+
+        } catch (error: any) {
+            console.error('Error al visualizar:', error);
+            alert(error.message || 'Ocurrió un error al intentar abrir el documento.');
+        } finally {
+            setVisualizandoId(null);
+        }
     };
 
     const handleEliminarActa = async (idDocument: number | string | undefined) => {
@@ -114,7 +195,7 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
             });
             const data = await res.json();
             if (res.ok && data.status) {
-                setDocumentos((prev) => prev.filter((d) => String(d.idDocument ?? d.iddocument ?? d.IDDOCUMENT) !== String(idDocument)));
+                setDocumentos((prev) => prev.filter((d) => String(d.idDocument ?? d.iddocument ?? d.IDDOCUMENT ?? d.id_acta) !== String(idDocument)));
             } else {
                 alert(data.message || 'No se pudo eliminar el documento.');
             }
@@ -123,19 +204,32 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
         }
     };
 
+    const obtenerNombreTipoPorId = (idType: number | string) => {
+        const tipo = tiposActa.find((t) => Number(obtenerIdTipoActa(t)) === Number(idType));
+        return tipo ? obtenerNombreTipoActa(tipo) : `Tipo #${idType}`;
+    };
+
     return (
         <div className="gestor-card" style={{ marginTop: '20px', borderTop: '3px solid #0284c7' }}>
             <h4 style={{ marginBottom: '15px' }}>📁 Actas y Documentos Adjuntos del Usuario</h4>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '15px' }}>
-                <input
-                    type="text"
-                    placeholder="Descripción del documento"
-                    value={nombreDocumento}
-                    onChange={(e) => setNombreDocumento(e.target.value)}
+                <select
+                    value={idTypeActaSelected}
+                    onChange={(e) => setIdTypeActaSelected(e.target.value)}
                     className="gestor-text-input"
-                    style={{ maxWidth: '250px', padding: '8px' }}
-                />
+                    style={{ maxWidth: '240px', padding: '8px' }}
+                >
+                    {tiposActa.map((tipo, idx) => {
+                        const idVal = obtenerIdTipoActa(tipo);
+                        const nombreVal = obtenerNombreTipoActa(tipo);
+                        return (
+                            <option key={idVal || idx} value={idVal}>
+                                {nombreVal}
+                            </option>
+                        );
+                    })}
+                </select>
 
                 <input
                     type="file"
@@ -181,7 +275,10 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
             ) : documentos.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {documentos.map((doc, index) => {
-                        const docId = doc.idDocument ?? doc.iddocument ?? doc.IDDOCUMENT ?? index;
+                        const docId = doc.idDocument ?? doc.iddocument ?? doc.IDDOCUMENT ?? doc.id_acta ?? index;
+                        const idTipoDoc = doc.id_typeActa ?? (doc as any).ID_TYPEACTA ?? 1;
+                        const estaAbriendo = visualizandoId === docId;
+
                         return (
                             <div
                                 key={String(docId)}
@@ -197,14 +294,15 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
                                     gap: '10px',
                                 }}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
                                     <span style={{ fontWeight: 'bold', color: '#374151' }}>
-                                        {doc.document || `Documento #${index + 1}`}
+                                        [{obtenerNombreTipoPorId(idTipoDoc)}]
                                     </span>
 
                                     <button
                                         type="button"
-                                        onClick={() => handleVisualizarActa(doc.url)}
+                                        onClick={() => handleVisualizarActa(doc.url, docId)}
+                                        disabled={estaAbriendo}
                                         style={{
                                             background: 'none',
                                             border: 'none',
@@ -215,7 +313,7 @@ export function SeccionActasUsuario({ idUser }: SeccionActasUsuarioProps) {
                                             fontWeight: 500,
                                         }}
                                     >
-                                        Visualizar Archivo
+                                        {estaAbriendo ? 'Cargando...' : 'Visualizar Archivo'}
                                     </button>
                                 </div>
 

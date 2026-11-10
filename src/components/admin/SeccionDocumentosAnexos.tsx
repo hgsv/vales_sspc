@@ -131,7 +131,6 @@ export function SeccionDocumentosAnexos({ idRegister, idType }: SeccionDocumento
     }
   };
 
-  // Método seguro basado en Blob para abrir el archivo en pestaña nueva sin interferir con React Router
   const handleVisualizarDocumento = async (urlDocumento: string | undefined, docId: number | string) => {
     if (!urlDocumento) {
       alert('No hay una URL válida para este documento.');

@@ -337,7 +337,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       const data = await response.json();
 
       if (response.ok && data.status) {
-        // Obtenemos la fecha de entrega del backend o generamos una local si el servidor la devuelve en data
         const fechaActualizada = data.fechaEntrega ?? (nuevoEstatus === 2 ? new Date().toISOString() : null);
 
         setRegistros((prev) =>
