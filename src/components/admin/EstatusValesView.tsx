@@ -67,7 +67,16 @@ interface RegistroVale {
   documentos?: Documento[];
 }
 
-type CampoFiltro = 'numero' | 'nombre' | 'cuenta' | 'estatus';
+type CampoFiltro =
+  | 'numero'
+  | 'nombre'
+  | 'enlace'
+  | 'origen'
+  | 'cuenta'
+  | 'pension'
+  | 'importe'
+  | 'estatus'
+  | 'fechaEntrega';
 
 export function EstatusValesView({ idType }: { idType?: number | null }) {
   const [registros, setRegistros] = useState<RegistroVale[]>([]);
@@ -83,15 +92,20 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
   const [registroTarjetas, setRegistroTarjetas] =
     useState<RegistroVale | null>(null);
-    
+
   // Estado para el modal de documentos anexos
   const [modalDocsRegisterId, setModalDocsRegisterId] = useState<number | string | null>(null);
 
   const [filtros, setFiltros] = useState<Record<CampoFiltro, string>>({
     numero: '',
     nombre: '',
+    enlace: '',
+    origen: '',
     cuenta: '',
+    pension: '',
+    importe: '',
     estatus: '',
+    fechaEntrega: '',
   });
 
   const [seleccionadosIds, setSeleccionadosIds] = useState<Set<string>>(
@@ -109,6 +123,14 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
 
   const obtenerFechaEntrega = (reg: RegistroVale) =>
     reg.fechaEntrega ?? reg.fechaentrega ?? reg.FECHAENTREGA ?? '';
+
+  const formatearFechaEntrega = (fechaRaw: string) =>
+    fechaRaw
+      ? new Date(fechaRaw).toLocaleString('es-MX', {
+          dateStyle: 'short',
+          timeStyle: 'medium',
+        })
+      : '-';
 
   const obtenerNombreEstatus = (estatus: number) => {
     switch (estatus) {
@@ -270,7 +292,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
         const enlace = document.createElement('a');
 
         enlace.href = url;
-        enlace.download = `formatos_vales_${id}.pdf`;
+        enlace.download = `formato_entrega_${id}.docx`;
         document.body.appendChild(enlace);
         enlace.click();
         enlace.remove();
@@ -297,7 +319,6 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
     idRegister: number | string,
     nuevoEstatus: number
   ) => {
-    // Si selecciona "Entregada" (estatus 2), pedimos confirmación con SweetAlert2
     if (nuevoEstatus === 2) {
       const confirmacion = await Swal.fire({
         title: '¿Confirmar entrega de tarjeta?',
@@ -311,7 +332,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       });
 
       if (!confirmacion.isConfirmed) {
-        return; // Si cancela, no hacemos nada
+        return;
       }
     }
 
@@ -337,15 +358,20 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       const data = await response.json();
 
       if (response.ok && data.status) {
-        const fechaActualizada = data.fechaEntrega ?? (nuevoEstatus === 2 ? new Date().toISOString() : null);
+        const fechaActualizada =
+          data.fechaEntrega ??
+          (nuevoEstatus === 2 ? new Date().toISOString() : null);
 
         setRegistros((prev) =>
           prev.map((reg) =>
             String(obtenerId(reg)) === String(idRegister)
-              ? { 
-                  ...reg, 
-                  idStatus: nuevoEstatus, 
-                  fechaEntrega: nuevoEstatus === 2 ? (fechaActualizada || reg.fechaEntrega) : reg.fechaEntrega 
+              ? {
+                  ...reg,
+                  idStatus: nuevoEstatus,
+                  fechaEntrega:
+                    nuevoEstatus === 2
+                      ? fechaActualizada || reg.fechaEntrega
+                      : reg.fechaEntrega,
                 }
               : reg
           )
@@ -504,7 +530,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            Accept: 'application/pdf',
+            Accept: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           },
         }
       );
@@ -515,25 +541,42 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
           .catch(() => ({ message: 'Error desconocido' }));
 
         alert(
-          `Error al generar PDF: ${errData.message || response.statusText}`
+          `Error al generar Formato de Entrega: ${errData.message || response.statusText}`
         );
         return;
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = `formato_entrega_${idRegister}.docx`;
+      document.body.appendChild(enlace);
+      enlace.click();
+      enlace.remove();
 
       window.setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
     } catch (error) {
-      console.error('Error al descargar formatos:', error);
-      alert('Error de conexión al descargar formatos.');
+      console.error('Error al descargar formato:', error);
+      alert('Error de conexión al descargar el formato de entrega.');
     }
   };
 
   const registrosFiltrados = registros.filter((reg) => {
     const nombre = obtenerNombreCompleto(reg);
     const estatus = obtenerNombreEstatus(obtenerEstatus(reg)).toLowerCase();
+    const enlace = String(obtenerEnlace(reg) || '-');
+    const origen = obtenerOrigen(reg);
+    const pension = String(obtenerPension(reg) || 'n/a');
+    const importeRaw = obtenerImporte(reg);
+    const importeTexto =
+      importeRaw !== '' && importeRaw !== null && !Number.isNaN(Number(importeRaw))
+        ? `${importeRaw} ${Number(importeRaw).toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN',
+          })}`
+        : String(importeRaw || '-');
+    const fechaEntrega = formatearFechaEntrega(obtenerFechaEntrega(reg));
 
     return (
       String(obtenerNumeroEmpleado(reg))
@@ -542,10 +585,15 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
       String(nombre)
         .toLowerCase()
         .includes(filtros.nombre.toLowerCase()) &&
+      enlace.toLowerCase().includes(filtros.enlace.toLowerCase()) &&
+      origen.toLowerCase().includes(filtros.origen.toLowerCase()) &&
       String(obtenerCuenta(reg) || 'sin asignación')
         .toLowerCase()
         .includes(filtros.cuenta.toLowerCase()) &&
-      estatus.includes(filtros.estatus.toLowerCase())
+      pension.toLowerCase().includes(filtros.pension.toLowerCase()) &&
+      importeTexto.toLowerCase().includes(filtros.importe.toLowerCase()) &&
+      estatus.includes(filtros.estatus.toLowerCase()) &&
+      fechaEntrega.toLowerCase().includes(filtros.fechaEntrega.toLowerCase())
     );
   });
 
@@ -556,10 +604,35 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
   const inicio = (pagina - 1) * porPagina;
   const registrosPagina = registrosFiltrados.slice(inicio, inicio + porPagina);
 
+  const idsPaginaActual = registrosPagina
+    .map((reg) => obtenerId(reg))
+    .filter((id): id is number | string => id !== undefined && id !== null)
+    .map((id) => String(id));
+
+  const todosPaginaSeleccionados =
+    idsPaginaActual.length > 0 &&
+    idsPaginaActual.every((id) => seleccionadosIds.has(id));
+
+  const algunosPaginaSeleccionados =
+    idsPaginaActual.some((id) => seleccionadosIds.has(id)) &&
+    !todosPaginaSeleccionados;
+
+  const toggleSeleccionarTodosPagina = () => {
+    setSeleccionadosIds((actuales) => {
+      const nuevos = new Set(actuales);
+      if (todosPaginaSeleccionados) {
+        idsPaginaActual.forEach((id) => nuevos.delete(id));
+      } else {
+        idsPaginaActual.forEach((id) => nuevos.add(id));
+      }
+      return nuevos;
+    });
+  };
+
   const inputFiltroStyle: React.CSSProperties = {
     boxSizing: 'border-box',
     width: '100%',
-    minWidth: '90px',
+    minWidth: '85px',
     padding: '6px 8px',
     border: '1px solid #ced4da',
     borderRadius: '4px',
@@ -773,8 +846,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
               marginTop: '20px',
               backgroundColor: '#0284c7',
               opacity: seleccionadosIds.size === 0 ? 0.6 : 1,
-              cursor:
-                seleccionadosIds.size === 0 ? 'not-allowed' : 'pointer',
+              cursor: seleccionadosIds.size === 0 ? 'not-allowed' : 'pointer',
             }}
           >
             {descargandoFormatos
@@ -811,7 +883,23 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                 </tr>
 
                 <tr>
-                  <th></th>
+                  <th style={{ textAlign: 'center', padding: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                      <input
+                        type="checkbox"
+                        aria-label="Seleccionar todos los registros de la página"
+                        checked={todosPaginaSeleccionados}
+                        ref={(el) => {
+                          if (el) el.indeterminate = algunosPaginaSeleccionados;
+                        }}
+                        disabled={idsPaginaActual.length === 0}
+                        onChange={toggleSeleccionarTodosPagina}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                      <span style={{ fontSize: '11px', fontWeight: 600 }}>Todos</span>
+                    </div>
+                  </th>
+
                   <th>
                     <input
                       style={inputFiltroStyle}
@@ -821,6 +909,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                       onChange={(e) => actualizarFiltro('numero', e.target.value)}
                     />
                   </th>
+
                   <th>
                     <input
                       style={inputFiltroStyle}
@@ -831,8 +920,33 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                     />
                   </th>
 
-                  {idType !== 3 && <th></th>}
-                  {idType === 1 && <th></th>}
+                  {idType !== 3 && (
+                    <th>
+                      <input
+                        style={inputFiltroStyle}
+                        aria-label="Filtrar por enlace"
+                        placeholder="Buscar..."
+                        value={filtros.enlace}
+                        onChange={(e) => actualizarFiltro('enlace', e.target.value)}
+                      />
+                    </th>
+                  )}
+
+                  {idType === 1 && (
+                    <th>
+                      <select
+                        style={inputFiltroStyle}
+                        aria-label="Filtrar por origen del registro"
+                        value={filtros.origen}
+                        onChange={(e) => actualizarFiltro('origen', e.target.value)}
+                      >
+                        <option value="">Todos</option>
+                        <option value="sector central">Sector Central</option>
+                        <option value="personal de carrera">Personal de Carrera</option>
+                      </select>
+                    </th>
+                  )}
+
                   <th>
                     <input
                       style={inputFiltroStyle}
@@ -842,8 +956,27 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                       onChange={(e) => actualizarFiltro('cuenta', e.target.value)}
                     />
                   </th>
-                  <th></th>
-                  <th></th>
+
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por pensiones"
+                      placeholder="Buscar..."
+                      value={filtros.pension}
+                      onChange={(e) => actualizarFiltro('pension', e.target.value)}
+                    />
+                  </th>
+
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por importe"
+                      placeholder="Buscar..."
+                      value={filtros.importe}
+                      onChange={(e) => actualizarFiltro('importe', e.target.value)}
+                    />
+                  </th>
+
                   <th>
                     <select
                       style={inputFiltroStyle}
@@ -858,7 +991,17 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                       <option value="cancelada">Cancelada</option>
                     </select>
                   </th>
-                  <th></th>
+
+                  <th>
+                    <input
+                      style={inputFiltroStyle}
+                      aria-label="Filtrar por fecha de entrega"
+                      placeholder="Buscar..."
+                      value={filtros.fechaEntrega}
+                      onChange={(e) => actualizarFiltro('fechaEntrega', e.target.value)}
+                    />
+                  </th>
+
                   <th></th>
                   <th></th>
                   <th></th>
@@ -877,22 +1020,17 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                   const cuenta = obtenerCuenta(reg);
                   const pension = obtenerPension(reg);
                   const fechaEntregaRaw = obtenerFechaEntrega(reg);
-                  
-                  // Formatear la fecha de entrega si existe
-                  const fechaEntregaFormateada = fechaEntregaRaw 
-                    ? new Date(fechaEntregaRaw).toLocaleString('es-MX', {
-                        dateStyle: 'short',
-                        timeStyle: 'medium',
-                      })
-                    : '-';
+                  const fechaEntregaFormateada = formatearFechaEntrega(fechaEntregaRaw);
 
                   const importeRaw = obtenerImporte(reg);
                   const importeFormateado =
                     importeRaw !== '' && importeRaw !== null && !Number.isNaN(Number(importeRaw))
-                      ? Number(importeRaw).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
+                      ? Number(importeRaw).toLocaleString('es-MX', {
+                          style: 'currency',
+                          currency: 'MXN',
+                        })
                       : importeRaw || '-';
 
-                  // Validación de documentos de la fila actual
                   const documentosAsociados = reg.documentos || [];
                   const todosArchivosValidados =
                     documentosAsociados.length > 0 &&
@@ -921,6 +1059,7 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                             seleccionadosIds.has(String(idRegister))
                           }
                           onChange={() => cambiarSeleccion(idRegister)}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
                         />
                       </td>
 
@@ -1028,7 +1167,15 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
                 })}
                 {registrosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={idType === 1 ? 14 : 13} className="gestor-empty-row">
+                    <td
+                      colSpan={
+                        11 +
+                        (idType !== 3 ? 1 : 0) +
+                        (idType === 1 ? 1 : 0) +
+                        1
+                      }
+                      className="gestor-empty-row"
+                    >
                       No se encontraron registros con los filtros seleccionados.
                     </td>
                   </tr>
@@ -1051,9 +1198,9 @@ export function EstatusValesView({ idType }: { idType?: number | null }) {
               {registrosFiltrados.length === 0
                 ? 'Sin resultados'
                 : `Mostrando ${inicio + 1}–${Math.min(
-                  inicio + porPagina,
-                  registrosFiltrados.length
-                )} de ${registrosFiltrados.length}`}
+                    inicio + porPagina,
+                    registrosFiltrados.length
+                  )} de ${registrosFiltrados.length}`}
             </span>
 
             <label>
